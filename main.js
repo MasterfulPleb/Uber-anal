@@ -1,11 +1,17 @@
 const { app, BrowserWindow } = require('electron')
+const path = require('path')
+const { contextIsolated } = require('process')
 
 //Opens window on app start
 function createWindow () {
     const win = new BrowserWindow({
-        width: 800,
-        height: 600,
-        autoHideMenuBar: true
+        width: 1200,
+        height: 1000,
+        autoHideMenuBar: true,
+        webPreferences: {
+            nodeIntegration: true,
+            contextIsolation: false,
+          }
     })
     win.loadFile('index.html')
 }
