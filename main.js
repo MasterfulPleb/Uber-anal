@@ -1,6 +1,7 @@
 const { app, BrowserWindow } = require('electron')
-const path = require('path')
-const { contextIsolated } = require('process')
+
+app.whenReady().then(createWindow)
+app.on('window-all-closed', app.quit)
 
 //Opens window on app start
 function createWindow () {
@@ -15,9 +16,3 @@ function createWindow () {
     })
     win.loadFile('index.html')
 }
-app.whenReady().then(createWindow)
-
-//Closes app on window close
-app.on('window-all-closed', function () {
-    app.quit()
-})
