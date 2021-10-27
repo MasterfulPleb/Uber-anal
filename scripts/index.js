@@ -1,4 +1,4 @@
-const { processFiles } = require('./scripts/processFiles.js')
+const { processFiles } = require('./scripts/process-files.js')
 
 let trips = []
 
