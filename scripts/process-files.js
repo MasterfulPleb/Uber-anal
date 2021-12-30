@@ -56,7 +56,7 @@ async function processFiles(/**@type {FileList}*/files) {
     // after all files have been imported, compile & sort data
     return await Promise.all(promises)
         .then(data => compileTrips(data))
-        .finally(logRemovedTrips)
+        //.finally(logRemovedTrips)// for debugging purposes
 }
 // reads file contents, removes irrelevant data, returns it in a promise
 async function importFile(/**@type {File}*/file) {
@@ -114,9 +114,9 @@ function toNumber(/**@type {String}*/n) {
 }
 // removes trips without a base fare or cancellation fee
 function cleanTrips(/**@type {{dateTime:Date,fare:{}}[]}*/trips) {
-    for (let i=trips.length; i > -1; i--) {
-        let noBase = arr[i].fare.base == 0;
-        let noCancel = arr[i].fare.cancel == 0;
+    for (let i=trips.length-1; i>-1; i--) {
+        let noBase = trips[i].fare.base == 0;
+        let noCancel = trips[i].fare.cancel == 0;
         if (noBase && noCancel) removedTrips.push(trips.splice(i, 1)[0]);
     }
     return trips;
