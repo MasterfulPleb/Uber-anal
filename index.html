@@ -2,15 +2,17 @@
 <html>
     <head>
         <title>UberAnal</title>
-        <meta charset="UTF-8">
         <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
         <link rel="stylesheet" href="./styles/index.css"/>
     </head>
     <body>
-        <div id="data"><!--Text input/output area-->
-            <div id="input"></div>
-            <textarea id="output" placeholder="Output"></textarea>
-            <button id="analyze">Analyze</button>
+        <div id="input-view"><!--Text input/output area-->
+            <div class="inactive" id="input-box">
+                <span>Drag statements here to analyze</span>
+            </div>
+        </div>
+        <div id="analysis-view">
+            <div id="chart"></div>
         </div>
         <script src="./scripts/index.js"></script>
     </body>

@@ -20,6 +20,7 @@
   "dependencies": {
     "@mapbox/node-pre-gyp": "^1.0.6",
     "electron-squirrel-startup": "^1.0.0",
+    "highcharts": "^9.3.2",
     "jquery": "^3.6.0",
     "trim-newlines": "^3.0.1"
   },

@@ -51,7 +51,7 @@ async function processFiles(/**@type {FileList}*/files) {
         if (!dupes.some(n => n == name)) {
             dupes.push(name);
             promises.push(importFile(files[i]));
-        } else console.log('duplicate file detected');
+        } else console.warn('duplicate file detected & ignored');
     }
     // after all files have been imported, compile & sort data
     return await Promise.all(promises)

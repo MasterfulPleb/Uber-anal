@@ -1,6 +1,7 @@
 'use strict';
 
 exports.simulateTimes = simulateTimes;
+exports.secondsBetween = secondsBetween;
 
 /**
  * @type {{
