@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>UberAnal</title>
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
+        <link rel="stylesheet" href="./styles/index.css"/>
+    </head>
+    <body>
+        <div id="input-view"><!--Text input/output area-->
+            <div class="inactive" id="input-box">
+                <span>Drag statements here to analyze</span>
+            </div>
+        </div>
+        <div id="analysis-view">
+            <div id="chart"></div>
+        </div>
+        <script src="./scripts/index.js"></script>
+    </body>
+</html>

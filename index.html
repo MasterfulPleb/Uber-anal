@@ -2,18 +2,19 @@
 <html>
     <head>
         <title>UberAnal</title>
-        <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';">
+        <meta http-equiv="Content-Security-Policy" content="script-src 'self';">
         <link rel="stylesheet" href="./styles/index.css"/>
+        <script src="./scripts/index.js"></script>
     </head>
     <body>
-        <div id="input-view"><!--Text input/output area-->
-            <div class="inactive" id="input-box">
-                <span>Drag statements here to analyze</span>
-            </div>
+        <div id="login-view"><!--Initial screen, presents a login page-->
+            <button id="login-button">Log in</button>
         </div>
-        <div id="analysis-view">
+
+        
+
+        <div id="analysis-view"><!--everything after login-->
             <div id="chart"></div>
         </div>
-        <script src="./scripts/index.js"></script>
     </body>
 </html>
