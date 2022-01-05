@@ -1,55 +1,45 @@
 'use strict';
 
 const { processFiles } = require('./scripts/process-files.js');
-const { simulateTimes,secondsBetween } = require('./scripts/simulation.js');
-var Highcharts = require('highcharts/highstock');
+const { simulateTimes, secondsBetween } = require('./scripts/simulation.js');
+const $ = require('jquery')
+const Highcharts = require('highcharts/highstock');
 require('highcharts/indicators/indicators')(Highcharts);
-//require('highcharts/indicators/trendline')(Highcharts);
 
 
 var data = [];// for testing purposes
 
 // listeners for statement input
-const input = document.getElementById('input-box');
-input.addEventListener('dragover', ev => {
+const input = $('#input-box');
+input[0].addEventListener('dragover', ev => {
     ev.preventDefault();
-    input.className = 'drag';
+    input.addClass('drag')
 });
-input.addEventListener('dragleave', () => input.className = 'inactive');
-input.addEventListener('drop', ev => {
+input[0].addEventListener('dragleave', () => input.removeClass('drag'));
+input[0].addEventListener('drop', ev => {
     ev.preventDefault();
-    document.getElementById('input-view').style.display = 'none';
-    document.getElementById('analysis-view').style.display = 'block';
+    $('#input-view').addClass('hidden')
+    $('#analysis-view').removeClass('hidden');
     // converts files into array of trip objects
     processFiles(ev.dataTransfer.files)
         .then(d => data = d)
         .finally(analyze);
 });
 // listeners for charts
-const type = document.getElementById('type');
-const aggregation = document.getElementById('aggregation');
-const period = document.getElementById('period');
+const type = $('#type')[0];
+const aggregation = $('#aggregation')[0];
+const period = $('#period')[0];
 type.addEventListener('change', () => {
     renderChart();
 });
 aggregation.addEventListener('change', () => {
     // hides the time period dropdown cause it's only for aggregated data
-    const p = document.getElementsByClassName('period');// need to make this more robust so it can pick out certain values in period dropdown to show depending on aggregation
-    if (aggregation.value == 'none') {
-        for (let e of p) {
-            e.classList.add('hidden')
-        }
-    } else {
-        for (let e of p) {
-            e.classList.remove('hidden')
-        }
-    }
+    if (aggregation.value == 'none') $('.period').addClass('hidden');
+    else $('.period').removeClass('hidden');
     // shows/hides fields in period dropdown depending on aggregate
     if (aggregation.value == 'days') {
-        const weekdays = document.getElementsByClassName('weekdays')
-        for (let e of weekdays) {
-            e.classList.add('hidden')
-        }
+        $('.weekdays').addClass('hidden');
+        $('.week').removeClass('hidden');
     }
     renderChart();
 });
@@ -517,10 +507,9 @@ function buildScatterDayWeek(charts) {
 
 // chooses proper chart to render based on dropdown selections
 function renderChart() {
-    debugger;
-    const type = document.getElementById('type').value;
-    const aggregation = document.getElementById('aggregation').value;
-    const period = document.getElementById('period').value;
+    const type = $('#type')[0].value;
+    const aggregation = $('#aggregation')[0].value;
+    const period = $('#period')[0].value;
     try {
         if (type == 'scatter') {
             if (aggregation == 'none') chart = Highcharts.chart('chart', charts.scatter.none);

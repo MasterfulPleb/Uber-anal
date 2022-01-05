@@ -10,11 +10,17 @@ body {
     background-color: rgb(37, 37, 37);
     color: rgb(187 187 187);
 }
+.hidden {
+    display: none
+}
 #input-view {
     display: flex;
     height: 100%;
     justify-content: center;
     align-items: center;
+}
+#input-view.hidden {
+    display: none;
 }
 #input-box.drag {
     background-color: rgb(31, 31, 31);
@@ -33,7 +39,6 @@ body {
     font-size: 2em;
 }
 #analysis-view {
-    display: none;
     height: 100%;
 }
 #chart-selector {
@@ -43,9 +48,6 @@ body {
 }
 #chart-selector select {
     margin-right: 1em;
-}
-.hidden {
-    display: none
 }
 #chart-wrapper {
     height: calc(100% - 3em);
