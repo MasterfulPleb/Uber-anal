@@ -6,6 +6,8 @@ exports.processFiles = processFiles;
 // whitelist of properties to keep from raw CSV
 var whitelist = [
     'Date/Time',
+    'Trip ID',
+    'Type',
     'Fare Base',
     'Fare Cancellation',
     'Fare Distance',
@@ -56,7 +58,8 @@ async function processFiles(/**@type {FileList}*/files) {
     // after all files have been imported, compile & sort data
     return await Promise.all(promises)
         .then(data => compileTrips(data))
-        //.finally(logRemovedTrips)// for debugging purposes
+        .then(data => reintroduceTips(data))
+        .finally(logRemovedTrips)
 }
 // reads file contents, removes irrelevant data, returns it in a promise
 async function importFile(/**@type {File}*/file) {
@@ -92,11 +95,15 @@ function cleanProperties(/**@type {{}[]}*/trips) {
         if (!whitelist.includes(v)) return true;
     });
     // replaces old properties with more simply named ones in the new 'fare' object
-    let oldKeys = whitelist.slice(1);
+    let oldKeys = whitelist.slice(3);
     for (let trip of trips) {
         for (let key of junkKeys) delete trip[key];
         trip.dateTime = new Date(trip['Date/Time']);
         delete trip['Date/Time'];
+        trip.id = trip['Trip ID'];
+        delete trip['Trip ID'];
+        trip.type = trip.Type;
+        delete trip.Type;
         trip.fare = {};
         for (let i=0; i<fareKeys.length; i++) {
             trip.fare[fareKeys[i]] = toNumber(trip[oldKeys[i]]);
@@ -131,10 +138,21 @@ function compileTrips(/**@type {{dateTime:Date,fare:{}}[][]}>>}*/data) {
 }
 // logs trips removed from the dataset
 function logRemovedTrips() {
-    if (removedTrips != []) {
+    if (removedTrips.length != 0) {
         let s = 's';
         if (removedTrips.length == 1) s = '';
         console.log('Removed ' + removedTrips.length + ' trip' + s + ' from the dataset:');
         console.log(removedTrips);
     }
+}
+// puts tips from 'removed trips' back into the proper trip in the dataset
+function reintroduceTips(/**@type {Array}*/trips) {
+    let badTrips = [];
+    for (let tip of removedTrips) {
+        const i = trips.findIndex((trip) => trip.id == tip.id);
+        if (i == -1) badTrips.push(tip);
+        trips[i].fare.tip += tip.fare.tip;
+    }
+    removedTrips = badTrips;
+    return trips;
 }

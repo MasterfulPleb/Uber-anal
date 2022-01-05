@@ -36,6 +36,20 @@ body {
     display: none;
     height: 100%;
 }
+#chart-selector {
+    box-sizing: border-box;
+    height: 3em;
+    padding: .5em;
+}
+#chart-selector select {
+    margin-right: 1em;
+}
+.hidden {
+    display: none
+}
+#chart-wrapper {
+    height: calc(100% - 3em);
+}
 #chart {
     height: 100%;
 }

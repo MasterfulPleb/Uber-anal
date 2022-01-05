@@ -12,7 +12,35 @@
             </div>
         </div>
         <div id="analysis-view">
-            <div id="chart"></div>
+            <div id="chart-selector">
+                <label for="type" class="type">Chart type:</label>
+                <select name="type" id="type" class="type">
+                    <option class="scatter" value="scatter">Scatter</option>
+                </select>
+                <label for="aggregation" class="aggregation">Aggregation:</label>
+                <select name="aggregation" id="aggregation" class="aggregation">
+                    <option class="none" value="none">None</option>
+                    <option class="hours" value="hours">Hours</option>
+                    <option class="days" value="days">Days</option>
+                    <option class="weeks" value="weeks">Weeks</option>
+                    <option class="months" value="months">Months</option>
+                    <option class="years" value="years">Years</option>
+                </select>
+                <label for="period" class="period hidden">Time period:</label>
+                <select name="period" id="period" class="period hidden">
+                    <option class="week" value="week">Week</option>
+                    <option class="weekdays" value="mon">Mon</option>
+                    <option class="weekdays" value="tue">Tue</option>
+                    <option class="weekdays" value="wed">Wed</option>
+                    <option class="weekdays" value="thu">Thu</option>
+                    <option class="weekdays" value="fri">Fri</option>
+                    <option class="weekdays" value="sat">Sat</option>
+                    <option class="weekdays" value="sun">Sun</option>
+                </select>
+            </div>
+            <div id="chart-wrapper">
+                <div id="chart"></div>
+            </div>
         </div>
         <script src="./scripts/index.js"></script>
     </body>
