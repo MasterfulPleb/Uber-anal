@@ -88,23 +88,25 @@ Highcharts.setOptions({
 })
 
 var chart;
-var data = [];// for testing purposes
+var test = [];// for testing purposes
 
 // listeners for statement input
 const input = $('#input-box');
-input[0].addEventListener('dragover', ev => {
+const inputOverlay = $('#input-overlay')[0];
+inputOverlay.addEventListener('dragover', ev => {
     ev.preventDefault();
-    input.addClass('drag')
 });
-input[0].addEventListener('dragleave', () => input.removeClass('drag'));
-input[0].addEventListener('drop', ev => {
+inputOverlay.addEventListener('dragenter', () => input.addClass('drag'));
+inputOverlay.addEventListener('dragleave', () => input.removeClass('drag'));
+inputOverlay.addEventListener('drop', ev => {
     ev.preventDefault();
-    $('#input-view').addClass('hidden')
-    $('#analysis-view').removeClass('hidden');
+    input.removeClass('drag');
     // converts files into array of trip objects
-    processFiles(ev.dataTransfer.files)
-        .then(d => data = d)
-        .finally(analyze);
+    processFiles(ev.dataTransfer.files).then(data => {
+        $('#input-view').addClass('hidden');
+        $('#analysis-view').removeClass('hidden');
+        analyze(data);
+    })
 });
 // listeners for charts
 $('#type').on('change', () => {
@@ -160,11 +162,11 @@ $('#period').on('change', () => {
 });
 
 // analyzes trips separating them into days and builds charts
-function analyze() {
+function analyze(data) {
     const days = simulateTimes(data);
     const charts = buildCharts(days);
     renderChart();
-    data = charts;// for testing purposes
+    test = charts;// for testing purposes
     
 
     // any other stuff i want to add, statistics, charts, etc..

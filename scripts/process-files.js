@@ -4,7 +4,7 @@ exports.processFiles = processFiles;
 
 
 // whitelist of properties to keep from raw CSV
-var whitelist = [
+const whitelist = [
     'Date/Time',
     'Trip ID',
     'Type',
@@ -23,7 +23,7 @@ var whitelist = [
     'Total'
 ];
 // properties to use in the fare object in each trip
-var fareKeys = [
+const fareKeys = [
     'base',
     'cancel',
     'distance',
@@ -53,7 +53,7 @@ async function processFiles(/**@type {FileList}*/files) {
         if (!dupes.some(n => n == name)) {
             dupes.push(name);
             promises.push(importFile(files[i]));
-        } else console.warn('duplicate file detected & ignored');
+        } else console.info(`duplicate file detected & ignored: ${name}`);
     }
     // after all files have been imported, compile & sort data
     return await Promise.all(promises)
@@ -90,6 +90,10 @@ function parseCSV(/**@type {String}*/CSVtext) {
 }
 // removes irrelevant properties from trip objects, converts strings to numbers
 function cleanProperties(/**@type {{}[]}*/trips) {
+    if (trips.length == 0) {
+        console.info(`statement detected with no trips, will be ignored`)
+        return [];
+    }
     // discovers irrelevant properties & adds them to an array
     let junkKeys = Object.keys(trips[0]).filter((v) => {
         if (!whitelist.includes(v)) return true;
@@ -150,7 +154,10 @@ function reintroduceTips(/**@type {Array}*/trips) {
     let badTrips = [];
     for (let tip of removedTrips) {
         const i = trips.findIndex((trip) => trip.id == tip.id);
-        if (i == -1) badTrips.push(tip);
+        if (i == -1) {
+            badTrips.push(tip);
+            break;
+        }
         trips[i].fare.tip += tip.fare.tip;
     }
     removedTrips = badTrips;

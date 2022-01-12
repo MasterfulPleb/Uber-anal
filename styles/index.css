@@ -22,11 +22,9 @@ body {
 #input-view.hidden {
     display: none;
 }
-#input-box.drag {
-    background-color: rgb(31, 31, 31);
-}
 #input-box {
     display: flex;
+    position: relative;
     width: 90%;
     height: 80%;
     border: 4px solid rgb(93, 93, 93);
@@ -35,8 +33,18 @@ body {
     justify-content: center;
     align-items: center;
 }
+#input-box.drag {
+    background-color: rgb(31, 31, 31);
+}
+#input-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
 #input-box span {
     font-size: 2em;
+
 }
 #analysis-view {
     height: 100%;
