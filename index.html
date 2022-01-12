@@ -15,33 +15,36 @@
             <div id="chart-selector">
                 <label for="type" class="type">Chart type:</label>
                 <select name="type" id="type" class="type">
-                    <option class="scatter" value="scatter">Scatter</option>
+                    <option class="scatter" value="scatter">Scatter/Spline</option>
                 </select>
                 <label for="aggregation" class="aggregation">Aggregation:</label>
                 <select name="aggregation" id="aggregation" class="aggregation">
                     <option class="none" value="none">None</option>
                     <option class="hours" value="hours">Hours</option>
                     <option class="days" value="days">Days</option>
-                    <option class="weeks" value="weeks">Weeks</option>
-                    <option class="months" value="months">Months</option>
-                    <option class="years" value="years">Years</option>
+                    <option class="weeks hidden" value="weeks">Weeks</option>
+                    <option class="months hidden" value="months">Months</option>
+                    <option class="years hidden" value="years">Years</option>
                 </select>
-                <label for="period" class="period hidden">Time period:</label>
-                <select name="period" id="period" class="period hidden">
-                    <option class="week" value="week">Week</option>
-                    <option class="weekdays" value="mon">Mon</option>
-                    <option class="weekdays" value="tue">Tue</option>
-                    <option class="weekdays" value="wed">Wed</option>
-                    <option class="weekdays" value="thu">Thu</option>
-                    <option class="weekdays" value="fri">Fri</option>
-                    <option class="weekdays" value="sat">Sat</option>
-                    <option class="weekdays" value="sun">Sun</option>
+                <label for="period" class="period">Time period:</label>
+                <select name="period" id="period" class="period">
+                    <option class="all" value="all">All</option>
+                    <option class="week hidden" value="week">Week</option>
+                    <option class="weekdays mon" value="mon">Mon</option>
+                    <option class="weekdays tue" value="tue">Tue</option>
+                    <option class="weekdays wed" value="wed">Wed</option>
+                    <option class="weekdays thu" value="thu">Thu</option>
+                    <option class="weekdays fri" value="fri">Fri</option>
+                    <option class="weekdays sat" value="sat">Sat</option>
+                    <option class="weekdays sun" value="sun">Sun</option>
                 </select>
             </div>
             <div id="chart-wrapper">
                 <div id="chart"></div>
             </div>
         </div>
+        <!--this comment is literally only here because if it isnt,
+            the ● doesnt show up in chart tooltips. ● -->
         <script src="./scripts/index.js"></script>
     </body>
 </html>
