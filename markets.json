@@ -1,0 +1,94 @@
+{
+  "Upstate NY": {
+    "UberX": {
+      "base": 0.77,
+      "mile": 0.675,
+      "minute": 0.1575,
+      "wait": 0.1875,
+      "minimum": 3.66,
+      "longPickup": {
+        "mile": 0.675,
+        "minute": 0.1575,
+        "threshold": 10
+      },
+      "cancel": {
+        "driver": 3.83,
+        "rider": 3.83,
+        "mile": 0.675,
+        "minute": 0.1575
+      }
+    },
+    "UberXL": {
+      "base": 1.18,
+      "mile": 0.9864,
+      "minute": 0.2736,
+      "wait": 0.2736,
+      "minimum": 5.54,
+      "longPickup": {
+        "mile": 0,
+        "minute": 0,
+        "threshold": 0
+      },
+      "cancel": {
+        "driver": 3.6,
+        "rider": 3.6,
+        "mile": 0.9864,
+        "minute": 0.2736
+      }
+    },
+    "Uber Pet": {
+      "base": 0.77,
+      "mile": 0.675,
+      "minute": 0.1575,
+      "wait": 0.1875,
+      "minimum": 3.66,
+      "longPickup": {
+        "mile": 0.675,
+        "minute": 0.1575,
+        "threshold": 10
+      },
+      "cancel": {
+        "driver": 3.83,
+        "rider": 3.83,
+        "mile": 0.675,
+        "minute": 0.1575
+      }
+    },
+    "Comfort": {
+      "base": 1.26,
+      "mile": 0.8424,
+      "minute": 0.2376,
+      "wait": 0.432,
+      "minimum": 5.7,
+      "longPickup": {
+        "mile": 0.8424,
+        "minute": 0.2376,
+        "threshold": 10
+      },
+      "cancel": {
+        "driver": 7.2,
+        "rider": 3.6,
+        "mile": 0.8424,
+        "minute": 0.2376
+      }
+    },
+    "Connect": {
+      "base": 1.01,
+      "mile": 0.5775,
+      "minute": 0.135,
+      "wait": 0.2625,
+      "minimum": 4.29,
+      "longPickup": {
+        "mile": 0.5775,
+        "minute": 0.135,
+        "threshold": 10
+      },
+      "cancel": {
+        "driver": 3.75,
+        "rider": 3.75,
+        "mile": 0.5775,
+        "minute": 0.135
+      }
+    }
+  }
+}

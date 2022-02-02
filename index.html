@@ -39,9 +39,35 @@
                     <option class="weekdays sat" value="sat">Sat</option>
                     <option class="weekdays sun" value="sun">Sun</option>
                 </select>
+                <button id="settings-button">Settings</button>
             </div>
             <div id="chart-wrapper">
                 <div id="chart"></div>
+            </div>
+        </div>
+        <div class="hidden" id="settings-view">
+            <div id="settings-box">
+                <div id="settings-content">
+                    <!--maybe add a nav bar on the left if the settings gets too big
+                    will probably need a separate section for first-time setup anyway-->
+                        <ul id="settings-list">
+                            <!--li id="settings-darkmode">
+                                <span>Darkmode</span>
+                                <label class="switch">
+                                    <input id="darkmode" type="checkbox">
+                                    <span class="slider round"></span>
+                                </label>
+                            </li-->
+                            <!--li id="settings-timezone">
+                                <label for="timezone"></label>
+                                <select name="timezone" id="timezone"></select>
+                            </li-->
+                        </ul>
+                </div>
+                <div id="settings-buttons">
+                    <button id="settings-apply">Apply</button>
+                    <button id="settings-cancel">Cancel</button>
+                </div>
             </div>
         </div>
         <!--this comment is literally only here because if it isnt,

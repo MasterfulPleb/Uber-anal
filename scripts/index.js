@@ -1,10 +1,12 @@
 'use strict';
 
-const { processFiles } = require('./scripts/process-files.js');
-const { simulateTimes, secondsBetween } = require('./scripts/simulation.js');
+const { processFiles } = require('/UberAnal/scripts/process-files.js');
+const { simulation, secondsBetween } = require('/UberAnal/scripts/simulation.new.js');
+//const { Settings } = require('/UberAnal/scripts/settings.js');
 const $ = require('jquery')
 const Highcharts = require('highcharts/highstock');
 require('highcharts/indicators/indicators')(Highcharts);
+
 
 // sets default values for charts
 Highcharts.setOptions({
@@ -108,7 +110,7 @@ inputOverlay.addEventListener('drop', ev => {
         analyze(data);
     })
 });
-// listeners for charts
+// listeners for chart selection
 $('#type').on('change', () => {
     if ($('#type')[0].value == 'scatter') {
         $('.none').removeClass('hidden');
@@ -160,13 +162,23 @@ $('#aggregation').on('change', () => {
 $('#period').on('change', () => {
     renderChart();
 });
+// settings listeners
+$('#settings-button').on('click', () => {
+    $('#settings-view').removeClass('hidden');
+})
+$('#settings-cancel').on('click', () => {
+    $('#settings-view').addClass('hidden');
+})
+
 
 // analyzes trips separating them into days and builds charts
 function analyze(data) {
-    const days = simulateTimes(data);
-    const charts = buildCharts(days);
-    renderChart();
-    test = charts;// for testing purposes
+    debugger;
+    const days = simulation(data);
+    //const charts = buildCharts(days);
+    //renderChart();
+    //test = charts;// for testing purposes
+    test = days;// for testing purposes
     
 
     // any other stuff i want to add, statistics, charts, etc..
@@ -353,27 +365,32 @@ function buildScatterNoneAll(/**@type {q}*/days, charts) {
             {
                 name: 'Trips/hour',
                 id: 't/h',
+                zIndex: 6,
                 color: '#39F',
                 data: []
             }, {
                 name: 'Hours',
+                zIndex: 2,
                 color: '#6cf',
                 data: []
             }, {
                 name: '$/hour',
                 id: '$/h',
+                zIndex: 3,
                 tooltip: { valuePrefix: '$' },
                 color: '#00981c',
                 data: []
             }, {
                 name: 'Surge $/hour',
                 id: 's$/h',
+                zIndex: 5,
                 tooltip: { valuePrefix: '$' },
                 color: '#c00',
                 data: []
             }, {
                 name: 'Tips $/hour',
                 id: 't$/h',
+                zIndex: 4,
                 tooltip: { valuePrefix: '$' },
                 color: '#e6e300',
                 data: []
@@ -381,12 +398,14 @@ function buildScatterNoneAll(/**@type {q}*/days, charts) {
                 type: 'ema',
                 name: 'Trips/hour EMA',
                 linkedTo: 't/h',
+                zIndex: 6,
                 color: '#39F',
                 params: { period: 14 }
             }, {
                 type: 'ema',
                 name: '$/hour EMA',
                 linkedTo: '$/h',
+                zIndex: 3,
                 tooltip: { valuePrefix: '$' },
                 color: '#00981c',
                 params: { period: 14 }
@@ -394,6 +413,7 @@ function buildScatterNoneAll(/**@type {q}*/days, charts) {
                 type: 'ema',
                 name: 'Surge $/hour EMA',
                 linkedTo: 's$/h',
+                zIndex: 5,
                 tooltip: { valuePrefix: '$' },
                 color: '#c00',
                 params: { period: 14 }
@@ -401,6 +421,7 @@ function buildScatterNoneAll(/**@type {q}*/days, charts) {
                 type: 'ema',
                 name: 'Tips $/hour EMA',
                 linkedTo: 't$/h',
+                zIndex: 4,
                 tooltip: { valuePrefix: '$' },
                 color: '#e6e300',
                 params: { period: 14 }
@@ -436,13 +457,13 @@ function buildScatterDaysWeek(charts) {
         },
         series: [
             {
-                name: 'Hours',
-                color: '#6cf',
-                data: []
-            }, {
                 name: 'Trips/hour',
                 zIndex: 6,
                 color: '#39F',
+                data: []
+            }, {
+                name: 'Hours',
+                color: '#6cf',
                 data: []
             }, {
                 name: '$/hour',
@@ -1013,27 +1034,32 @@ function buildScatterNoneWeekdays(charts) {
                 {
                     name: 'Trips/hour',
                     id: 't/h',
+                    zIndex: 6,
                     color: '#39F',
                     data: []
                 }, {
                     name: 'Hours',
+                    zIndex: 2,
                     color: '#6cf',
                     data: []
                 }, {
                     name: '$/hour',
                     id: '$/h',
+                    zIndex: 3,
                     tooltip: { valuePrefix: '$' },
                     color: '#00981c',
                     data: []
                 }, {
                     name: 'Surge $/hour',
                     id: 's$/h',
+                    zIndex: 5,
                     tooltip: { valuePrefix: '$' },
                     color: '#c00',
                     data: []
                 }, {
                     name: 'Tips $/hour',
                     id: 't$/h',
+                    zIndex: 4,
                     tooltip: { valuePrefix: '$' },
                     color: '#e6e300',
                     data: []
@@ -1041,12 +1067,14 @@ function buildScatterNoneWeekdays(charts) {
                     type: 'ema',
                     name: 'Trips/hour EMA',
                     linkedTo: 't/h',
+                    zIndex: 6,
                     color: '#39F',
                     params: { period: 8 }
                 }, {
                     type: 'ema',
                     name: '$/hour EMA',
                     linkedTo: '$/h',
+                    zIndex: 3,
                     tooltip: { valuePrefix: '$' },
                     color: '#00981c',
                     params: { period: 8 }
@@ -1054,6 +1082,7 @@ function buildScatterNoneWeekdays(charts) {
                     type: 'ema',
                     name: 'Surge $/hour EMA',
                     linkedTo: 's$/h',
+                    zIndex: 5,
                     tooltip: { valuePrefix: '$' },
                     color: '#c00',
                     params: { period: 8 }
@@ -1061,6 +1090,7 @@ function buildScatterNoneWeekdays(charts) {
                     type: 'ema',
                     name: 'Tips $/hour EMA',
                     linkedTo: 't$/h',
+                    zIndex: 4,
                     tooltip: { valuePrefix: '$' },
                     color: '#e6e300',
                     params: { period: 8 }
@@ -1111,8 +1141,8 @@ function buildScatterNoneWeekdays(charts) {
             d == 3 ? week.wed:
             d == 4 ? week.thu:
             d == 5 ? week.fri: week.sat;
-        weekday.hours.push([s0[i][0], s0[i][1]]);
-        weekday.trips.push([s1[i][0], s1[i][1]]);
+        weekday.trips.push([s0[i][0], s0[i][1]]);
+        weekday.hours.push([s1[i][0], s1[i][1]]);
         weekday.dollars.push([s2[i][0], s2[i][1]]);
         weekday.surge.push([s3[i][0], s3[i][1]]);
         weekday.tips.push([s4[i][0], s4[i][1]]);
@@ -1174,3 +1204,7 @@ function renderChart() {
 // if working night shift, wrap hourly stuff around the day proper. add ability to change the wrap time
 
 // include cancel rates in charts maybe
+
+
+
+// whitelist in process-fies could be a Set instead of Array

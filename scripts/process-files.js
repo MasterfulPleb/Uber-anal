@@ -1,7 +1,5 @@
 'use strict';
 
-exports.processFiles = processFiles;
-
 
 // whitelist of properties to keep from raw CSV
 const whitelist = [
@@ -22,8 +20,8 @@ const whitelist = [
     'Tip',
     'Total'
 ];
-// properties to use in the fare object in each trip
-const fareKeys = [
+// properties to use in the 'pay' object in each trip
+const payKeys = [
     'base',
     'cancel',
     'distance',
@@ -98,7 +96,7 @@ function cleanProperties(/**@type {{}[]}*/trips) {
     let junkKeys = Object.keys(trips[0]).filter((v) => {
         if (!whitelist.includes(v)) return true;
     });
-    // replaces old properties with more simply named ones in the new 'fare' object
+    // replaces old properties with more simply named ones in the new 'pay' object
     let oldKeys = whitelist.slice(3);
     for (let trip of trips) {
         for (let key of junkKeys) delete trip[key];
@@ -108,9 +106,9 @@ function cleanProperties(/**@type {{}[]}*/trips) {
         delete trip['Trip ID'];
         trip.type = trip.Type;
         delete trip.Type;
-        trip.fare = {};
-        for (let i=0; i<fareKeys.length; i++) {
-            trip.fare[fareKeys[i]] = toNumber(trip[oldKeys[i]]);
+        trip.pay = {};
+        for (let i=0; i<payKeys.length; i++) {
+            trip.pay[payKeys[i]] = toNumber(trip[oldKeys[i]]);
             delete trip[oldKeys[i]];
         }
     }
@@ -124,17 +122,17 @@ function toNumber(/**@type {String}*/n) {
     return result;
 }
 // removes trips without a base fare or cancellation fee
-function cleanTrips(/**@type {{dateTime:Date,fare:{}}[]}*/trips) {
+function cleanTrips(/**@type {{dateTime:Date,pay:{}}[]}*/trips) {
     for (let i=trips.length-1; i>-1; i--) {
-        let noBase = trips[i].fare.base == 0;
-        let noCancel = trips[i].fare.cancel == 0;
+        let noBase = trips[i].pay.base == 0;
+        let noCancel = trips[i].pay.cancel == 0;
         if (noBase && noCancel) removedTrips.push(trips.splice(i, 1)[0]);
     }
     return trips;
 }
 // compiles and sorts trips by date
-function compileTrips(/**@type {{dateTime:Date,fare:{}}[][]}>>}*/data) {
-    /**@type {{dateTime:Date,fare:{}}[]}*/
+function compileTrips(/**@type {{dateTime:Date,pay:{}}[][]}>>}*/data) {
+    /**@type {{dateTime:Date,pay:{}}[]}*/
     let trips = [];
     data.forEach(d => d.forEach(t => trips.push(t)));
     trips.sort((a, b) => a.dateTime - b.dateTime);
@@ -156,10 +154,26 @@ function reintroduceTips(/**@type {Array}*/trips) {
         const i = trips.findIndex((trip) => trip.id == tip.id);
         if (i == -1) {
             badTrips.push(tip);
-            break;
+        } else {
+            trips[i].pay.tip += tip.pay.tip;
+            trips[i].pay.total += tip.pay.tip;
         }
-        trips[i].fare.tip += tip.fare.tip;
+        
     }
     removedTrips = badTrips;
     return trips;
 }
+
+
+exports.processFiles = processFiles;
+
+// exports for tests
+exports.parseCSV = parseCSV;
+exports.cleanProperties = cleanProperties;
+exports.cleanTrips = cleanTrips;
+exports.compileTrips = compileTrips;
+exports.reintroduceTips = reintroduceTips;
+
+
+// need to change some things around to accomodate adding trips to the dataset
+// return an object containing both new trips and tips covering trips not in the new trips set 

@@ -211,7 +211,7 @@ function configureBlock(/**@type {blocks[0]}*/block, /**@type {String}*/minmax) 
     findPickupWaitCount(block);
     findEarliestEndTime(block);
     findLatestEndTime(block);
-    findUnpaidTime(block);
+    findUnpaidTime(block);//// end of block setup
     findPickupWaitTimes(block);
     setPickupWaitdurations(block, minmax, false);
     setTimes(block, false, true);
@@ -315,7 +315,7 @@ function findPickupWaitTimes(/**@type {blocks[0]}*/block) {
         * 
         * such blocks are marked for review via the line below, and should have 0 unaccounted-for time
         */
-       //console.error(`block found with no normal pickups/waits @ ${block.date}`);// for debugging purposes
+       console.error(`block found with no normal pickups/waits @ ${block.date}`);// for debugging purposes
     } else {
         min.unpaidPickup = Math.round(min.unaccounted * (pWeight/(pWeight+wWeight)));
         max.unpaidPickup = Math.round(max.unaccounted * (pWeight/(pWeight+wWeight)));
@@ -616,7 +616,7 @@ function findDowntime(/**@type {Number}*/passes, /**@type {String}*/minmax) {
                 downtime += gap;
             }
             if (downtime >= (block.model[minmax].downtime ?? 0)) block.model[minmax].downtime = downtime;
-            findUnpaidTime(block);
+            //findUnpaidTime(block);      redundant, replaced by getter
             findPickupWaitTimes(block);
             // only log warnings from these functions on the final pass
             try {
@@ -625,7 +625,7 @@ function findDowntime(/**@type {Number}*/passes, /**@type {String}*/minmax) {
                 const maxUnaccounted = block.model.normalPickups*599 + block.model.normalWaits*119;
                 const difference = block.model[minmax].unaccounted - maxUnaccounted;
                 block.model[minmax].downtime += difference;
-                findUnpaidTime(block);
+                //findUnpaidTime(block);      redundant, replaced by getter
                 findPickupWaitTimes(block);
                 setPickupWaitdurations(block, minmax, /*p==passes?true:*/false);
             }
@@ -687,3 +687,14 @@ function cleanupDays() {
         model.unpaidTime = model.unpaidPickup + model.unpaidWait + downtime;
     }
 }
+
+
+
+
+// use the fare time in canceled trips to adjust their pickup or wait times accordingly and 0 the fare,
+// because there obviously isnt a fare in a cancelled trip
+// maybe just make it a long pickup or wait instead in calculatePaidDurations() 
+
+// 1/29 - 1/30 started after midnight, figure out how to handle this in code
+
+//close small gaps of downtime that may not actually exist
