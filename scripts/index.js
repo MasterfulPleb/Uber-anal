@@ -3,13 +3,11 @@
 const { processFiles } = require('/UberAnal/scripts/process-files.js');
 const { simulation } = require('/UberAnal/scripts/simulation.new.js');
 const { secondsBetween } = require('/UberAnal/scripts/utility.js');
-//const { session } = require('electron')
 //const { Settings } = require('/UberAnal/scripts/settings.js');
 const $ = require('jquery')
 const Highcharts = require('highcharts/highstock');
 require('highcharts/indicators/indicators')(Highcharts);
 
-//const cook = session.defaultSession.cookies;
 
 // sets default values for charts
 Highcharts.setOptions({

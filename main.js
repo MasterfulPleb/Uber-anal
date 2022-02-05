@@ -1,4 +1,5 @@
 const { app, BrowserWindow } = require('electron')
+const path = require('path')
 
 app.whenReady().then(createWindow)
 app.on('window-all-closed', app.quit)
@@ -11,7 +12,7 @@ function createWindow () {
         autoHideMenuBar: true,
         webPreferences: {
             nodeIntegration: true,
-            contextIsolation: false,
+            contextIsolation: false
           }
     })
     win.loadFile('index.html')
