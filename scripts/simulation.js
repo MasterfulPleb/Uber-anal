@@ -601,7 +601,7 @@ function splitBlocks(/**@type {String}*/minmax) {
     }
     blocks = newBlocks;
 }
-// looks for gaps between trips and couts that time as 'downtime' in the block, refreshing times
+// looks for gaps between trips and counts that time as 'downtime' in the block, refreshing times
 function findDowntime(/**@type {Number}*/passes, /**@type {String}*/minmax) {
     for (let block of blocks) {
         const trips = block.trips;
@@ -649,6 +649,7 @@ function createAverageModel() {
 }
 // deletes old data from days and calculates new data points
 function cleanupDays() {
+    // turn this into a Days class?
     days = JSON.parse(JSON.stringify(days))// stringify to decouple days from blocks
     for (let day of days) {
         const model = day.model;

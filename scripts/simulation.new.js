@@ -1,13 +1,14 @@
 'use strict';
 
 const { Settings } = require('/UberAnal/scripts/settings.js');
+const { secondsBetween, addTime } = require('/UberAnal/scripts/utility.js');
 const markets = require('/UberAnal/markets.json');
 
 
 // part of a trip's model representing seconds between key points
 class Durations {
-    pickup;
-    wait;
+    /**@type {Number}*/pickup;
+    /**@type {Number}*/wait;
     constructor(trip) {
         // calculates time paid during trip in seconds (fare, long pickup, long wait)
         const pay = trip.pay;
@@ -35,21 +36,30 @@ class Durations {
                 // change this value to adjust canceled trip base time
                 // currently 240s + 2m + default pickup
     }
-    /*get pickup() {
-        return 'duh'
+}
+// 
+class Times {
+    /**@type {Date}*/#start;
+    /**@type {Date}*/wait;
+    /**@type {Date}*/fare;
+    /**@type {Date}*/end;
+    #model;
+    constructor(model) {
+        this.#model = model;
     }
-    get wait() {
-        return 'duh'
-    }*/
+    get start() {
+        return this.#start;
+    }
+    set start(date) {
+        this.#start = date;
+        const durations = this.#model.durations;
+        this.wait = addTime(date, durations.pickup + durations.longPickup);
+        this.fare = addTime(this.wait, durations.wait + durations.longWait);
+        this.end = addTime(this.fare, durations.fare);
+    }
 }
 // time model for an individual trip
 class TModel {
-    times = {
-        /**@type {Date}*/start:null,
-        /**@type {Date}*/wait:null,
-        /**@type {Date}*/fare:null,
-        /**@type {Date}*/end:null
-    };
     constructor(trip) {
         const pay = trip.pay;
         this.cancellation = pay.cancel > 0;
@@ -59,6 +69,7 @@ class TModel {
         this.paidTime = d.fare + d.longPickup + d.longWait;
         this.blockStart = false;
         this.blockEnd = false;
+        this.times = new Times(this);
     }
 }
 // a trip
@@ -78,11 +89,13 @@ class Trip {
         this.dayStart = trip.dayStart;
         this.dayEnd = trip.dayEnd;
     }
+    static trips = [];
     // configures an array of trips 
     static configure = function(trips) {
         // if time difference between trips > 6 hours, mark as new day
         // due to the way trips are processed, this time doesnt really matter
         // todo - confirm that this time doesnt really matter
+        // yeah it really doesnt matter, i should be detecting the day automatically with the offset setting
         const l = trips.length;
         trips[0].dayStart = true;
         trips[l-1].dayEnd = true;
@@ -96,7 +109,10 @@ class Trip {
                 trips[i-1].dayEnd = false;
             }
         }
+        ////////// replace above with... something
         for (const t in trips) trips[t] = new Trip(trips[t]);
+        Trip.trips = Trip.trips.concat(trips);
+        if (Settings.automaticallyDetectOffset) Settings.checkOffset(trips);
     }
 }
 // the class Min & Max are based on
@@ -210,7 +226,7 @@ class Max extends MinMax {
 class BModel {
     /**@type {Date}*/startTime
     constructor(/**@type {Trip[]}*/trips) {
-        this.startTime = trips[0].model.times.start = trips[0].dateTime;
+        this.startTime = trips[0].dateTime;
         this.paidTime = 0;
         for (const trip of trips) this.paidTime += trip.model.paidTime;
         this.longPickups = trips.filter(trip => trip.model.longPickup).length;
@@ -224,10 +240,13 @@ class BModel {
 // block of trips, generally representing a day
 class Block {
     constructor(/**@type {Trip[]}*/trips) {
-        this.date = trips[0].dateTime.toDateString();
+        let start = trips[0].dateTime;
+        if (start.getHours() < Settings.offset) this.date = addTime(start, -86400).toDateString();
+        else this.date = start.toDateString();
         /**@type {Trip[]}*/this.trips = trips;
         this.model = new BModel(trips);
         this.setDurations('max', false); // todo - review this setting and whether i would want it to be different when creating new blocks
+        this.setTimes(false, true);
     }
     // splits trips into array of objects representing blocks, returns blocks
     static create = function(/**@type {Trip[]}*/trips) {
@@ -239,7 +258,6 @@ class Block {
                 arr[0].model.blockStart = true;
                 trip.model.blockEnd = true;
                 blocks.push(new Block(arr.splice(0)));
-
             }
         }
         return blocks;
@@ -261,33 +279,87 @@ class Block {
     }
     // sets simulated times for each trip
     setTimes(visualWarnings=true, strict=false, correctTrips=false, minmax='') {
-        /*const trips = this.trips;
+        const trips = this.trips;
+        let collision = false;
+        let badTrips = []; // logs unfixable trips to prevent shiftTimes() from infinitely looping
+        let revisit = -1;
         for (let i = 0; i < trips.length; i++) {
-            const times = trips[i].model.times;
-            if (i != 0) {
-                const lastTripTimes = trips[i - 1].model.times;
-                if (true) {
-
+            const trip = trips[i];
+            const times = trip.model.times;
+            // first trip
+            if (i == 0) {
+                times.start = trip.dateTime;
+                continue;
+            }
+            const lastTripTimes = trips[i - 1].model.times;
+            // trip accepted before last trip's fare started according to model
+            if (lastTripTimes.fare > trip.dateTime) {
+                /* Strict refers to whether statement times are loosely interpreted or taken literally.
+                *  Statement times can be incorrect, so if loosely interpreted, will attempt to build a
+                *   timeline where no trips overlap.
+                *  However, this can lead to 'shifting' multiple trips into the future, in such a way
+                *   that trips are accepted before it's possible to do so.
+                *  If correctTrips is set to true, previous trip durations will be adjusted and 'i'
+                *   decremented to readjust those trip's times and make things work smoothly.
+                *  'correctTrips' can only be set to true if downtime is already calculated, and requires minmax.
+                *  This should be the final form of the timeline, but strict interpretation should be used 
+                *   for the purpose of finding breaks as the 'timeline shifting' makes it excessively hard
+                *   due to the break soaking up the shifted time and appearing to be much smaller.
+                *  Strict interpretation will not allow shifting, and in such cases, will find the
+                *   latest time the trip could have started according strictly to the statement.
+                */
+                if (strict) {
+                    times.start = addTime(trip.dateTime, trips[i-1].model.durations.fare);
+                    collision = true;
+                    continue;
+                }
+                if (!correctTrips) {
+                    times.start = lastTripTimes.end;
+                    collision = true;
+                    continue;
+                }
+                // for debugging purposes
+                if (minmax == '') throw console.error("'minmax' required when correctTrips is set to true");
+                // if current index is an unfixable trip, skips shiftTimes() and just sets the times & moves on
+                if (badTrips.includes(i)) {
+                    times.start = lastTripTimes.end;
+                    continue;
+                }
+                if (i != revisit) {
+                    try {
+                        // todo - build shiftTimes. probably into the Block class
+                        i -= shiftTimes(/*block, */i, minmax);
+                    } catch (stepsBack) {
+                        revisit = i;
+                        i -= stepsBack + 1;
+                    } finally {
+                        continue;
+                    }
+                }
+                try {
+                    i -= shiftTimes(/*block, */i, minmax, true);
+                } catch {
+                    badTrips.push(i);
+                    i -= stepsBack + 1;
+                    collision = true;
+                } finally {
+                    revisit = -1;
+                    continue;
                 }
             }
-            const durations = trips[i].model.durations;
-
-        }*/
-
-
-
+            // normal trip accepted during last trip
+            if (lastTripTimes.end >= trip.dateTime) {
+                times.start = lastTripTimes.end;
+                continue;
+            }
+            // normal trip but after downtime
+            times.start = trip.dateTime;
+        }
+        if (collision && visualWarnings) console.warn(`trip accepted before last fare time started on ${this.date}`);
     }
 }
 
 
-// returns difference in seconds between two date objects
-function secondsBetween(date1, date2) {
-    return Math.round(Math.abs( date1.getTime()-date2.getTime() )/1000);
-}
-// takes a date object and returns a new date object + seconds
-function addTime(date, seconds) {
-    return new Date(date.getTime() + seconds * 1000);
-}
 
 // adds new trips after simulation has already ran
 function addTrips(days, newTrips) {
@@ -299,6 +371,10 @@ function simulation(trips) {
     configureMarket();
     Trip.configure(trips);
     const blocks = Block.create(trips);
+    splitAtBreaks(blocks, 4);
+    debugger;
+    findDowntime(blocks);
+
     debugger;
 
     return blocks; // for testing
@@ -324,7 +400,51 @@ function configureMarket() {
         }
     }
 }
-
+// finds breaks in blocks and splits them
+function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
+    for (let p = 1; p <= passes; p++) {
+        console.groupCollapsed(`pass ${p}`); // for debugging purposes
+        // sets limit to 2 hours first pass, 1 hour second pass, 40 mins third, 30 fourth...
+        const limit = 7200 / p;
+        for (const block of blocks) {
+            const trips = block.trips;
+            for (let i = 0; i < trips.length - 1; i++) { // excludes last trip in each block
+                const gap = secondsBetween(trips[i].model.times.end, trips[i+1].model.times.start);
+                if (gap > limit) {
+                    console.warn(`break found on ${block.date}`); // for debugging purposes
+                    trips[i].model.blockEnd = true;
+                    trips[i+1].model.blockStart = true;
+                }
+            }
+        }
+        console.groupEnd(); // for debugging purposes
+        for (let i = blocks.length; i > 0; i--) {
+            const block = blocks.shift();
+            // searches for the index of the first block end, and if it is the current block end, continue
+            if (block.trips.findIndex(trip => trip.model.blockEnd == true) == block.trips.length - 1) {
+                blocks.push(block);
+                continue;
+            }
+            let arr = [];
+            for (const trip of block.trips) {
+                arr.push(trip);
+                if (trip.model.blockEnd) {
+                    blocks.push(new Block(arr.splice(0)));
+                }
+            }
+        }
+    }
+}
+// 
+function findDowntime(/**@type {Block[]}*/blocks) { // 1 pass 'min' i guess
+    for (const block of blocks) {
+        debugger;
+        const trips = block.trips;
+        block.setDurations('', false);
+        block.setTimes(false);
+        
+    }
+}
 
 
 
@@ -335,3 +455,11 @@ exports.secondsBetween = secondsBetween;
 
 // exports for tests
 exports.Block = Block;
+exports.Trip = Trip;
+
+
+
+// if start time is less than the offset chosen in settings after midnight, set block as previous day
+// i can probably automatically detect this setting
+
+// for very long breaks that couldnt possibly be downtime (2+ hours) dont count as downtime, but something else
