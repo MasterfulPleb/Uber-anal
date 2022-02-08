@@ -3,12 +3,12 @@
 const { secondsBetween } = require('/UberAnal/scripts/utility.js');
 const { Settings }       = require('/UberAnal/scripts/settings.js');
 const { processFiles }   = require('/UberAnal/scripts/process-files.js');
-const { simulation }     = require('/UberAnal/scripts/simulation.new.js');
-const { renderChart }     = require('/UberAnal/scripts/charts.js');
+const { simulateDays }   = require('/UberAnal/scripts/simulation.new.js');
+const { renderChart }    = require('/UberAnal/scripts/charts.js');
 const $                  = require('jquery');
 
 // imports for intellisense
-const { Trip, PreTrip }   = require('/UberAnal/scripts/process-filesjs');
+const { Trip, PreTrip }   = require('/UberAnal/scripts/process-files.js');
 
 
 // initializes settings class, loading settings from localStorage
@@ -25,7 +25,11 @@ $('#input-overlay').on('drop', ev => {
     $('#input-view').addClass('hidden');
     //$('#processing-view').removeClass('hidden');
     processFiles(ev.originalEvent.dataTransfer.files).then(data => {
-        analyze(data);
+        const days = simulateDays(data.trips);
+        debugger;
+
+
+        //analyze(data);
         //$('#processing-view').addClass('hidden');
         $('#analysis-view').removeClass('hidden');
     });
@@ -96,10 +100,3 @@ $('#settings-cancel').on('click', () => {
     $('#settings-view').addClass('hidden');
     // todo - revert any changes
 });
-
-
-/**@description */
-function analyze(data) {
-    debugger;
-
-}

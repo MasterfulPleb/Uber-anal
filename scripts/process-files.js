@@ -1,6 +1,6 @@
 'use strict';
 
-const { addTime } = require('/UberAnal/scripts/utility.js');
+const { addTime, secondsBetween } = require('/UberAnal/scripts/utility.js');
 const { Settings } = require('/UberAnal/scripts/settings.js');
 
 
@@ -114,8 +114,8 @@ class PreTrip {
         const tips = [];
         const removed = [];
         parsedCSV.forEach((trip, i) => {
-            if (trip.pay.base == 0 && trip.pay.cancel == 0) {
-                if (trip.pay.tip > 0) tips.push(parsedCSV.splice(i, 1)[0]);
+            if (isNaN(trip.pay.base) && isNaN(trip.pay.cancel)) {
+                if (!isNaN(trip.pay.tip)) tips.push(parsedCSV.splice(i, 1)[0]);
                 else removed.push(parsedCSV.splice(i, 1)[0]);
             }
         });
@@ -199,9 +199,11 @@ class TModel {
 }
 /**@description an individual trip*/
 class Trip extends PreTrip {
-    constructor(trip) {
+    constructor(/**@type {PreTrip}*/trip) {
         super(trip);
         this.model = new TModel(trip);
+        this.dayStart = trip.dayStart;
+        this.dayEnd = trip.dayEnd;
     }
     /**
      * @type {{ trips: Trip[], tips: PreTrip[], removed: PreTrip[] }}
@@ -214,7 +216,7 @@ class Trip extends PreTrip {
         /**@type {{ date: Date, trips: PreTrip[] }}*/
         let block = { trips: [] };
         for (const trip of trips) {
-            let offsetDate = trip.dateTime
+            let offsetDate = new Date(trip.dateTime)
             if (offsetDate.getHours() < Settings.offset) {
                 offsetDate = addTime(trip.dateTime, -86400);
             }
@@ -225,15 +227,15 @@ class Trip extends PreTrip {
                 block.trips.push(trip);
                 continue;
             }
-            if (offsetDate == block.date) {
+            if (secondsBetween(offsetDate, block.date) == 0) {
                 block.trips.push(trip);
                 continue;
             }
             block.trips[block.trips.length-1].dayEnd = true;
+            trip.dayStart = true;
             block = { date: offsetDate, trips: [trip] };
         }
         for (const t in trips) trips[t] = new Trip(trips[t]);
-        //Trip.trips = Trip.trips.concat(trips); // i dont think i actually need this
     }
 }
 
@@ -264,12 +266,13 @@ async function processFiles(/**@type {FileList}*/files) {
             obj.tips.forEach(trip => tips.push(trip));
             obj.removed.forEach(trip => removed.push(trip));
         }
-        tips.forEach((tip, i) => {
-            const match = trips.find(trip => trip.id == tip.id);
-            if (match == undefined) return;
-            match.pay.tip += tip.pay.tip;
+        for (let i = tips.length-1; i >= 0; i--) {
+            const match = trips.find(trip => trip.id == tips[i].id);
+            if (match == undefined) continue;
+            match.pay.tip += tips[i].pay.tip;
+            match.pay.total += tips[i].pay.total
             tips.splice(i, 1);
-        });
+        }
         if (tips.length > 0) {
             console.log(`${tips.length} tip${tips.length>1?'s':''} could not be matched to trips`);
             console.log(tips);
@@ -281,8 +284,8 @@ async function processFiles(/**@type {FileList}*/files) {
         if (Settings.automaticallyDetectOffset) Settings.detectOffset(trips);
         Trip.configure(trips);
         Trip.all.trips = Trip.all.trips.concat(trips);
-        Trip.all.tips = Trip.all.tips.concat(trips);
-        Trip.all.removed = Trip.all.removed.concat(trips);
+        Trip.all.tips = Trip.all.tips.concat(tips);
+        Trip.all.removed = Trip.all.removed.concat(removed);
         return {
             /**@type {Trip[]}*/trips: trips,
             tips: tips,

@@ -4,6 +4,10 @@ const { Settings } = require('/UberAnal/scripts/settings.js');
 const { secondsBetween, addTime } = require('/UberAnal/scripts/utility.js');
 
 
+// for testing purposes - this makes intellisense work
+const { Trip } = require('/UberAnal/scripts/process-files.js');
+
+
 // the class Min & Max are based on
 class MinMax {
     /**@type {BModel}*/#model;
@@ -238,6 +242,7 @@ class Block {
     }
     // 
     shiftTimes(i, minmax, revisit = false) {
+        //debugger;
         let stepsBack = 1;
         const trips = this.trips;
         const trip = trips[i];
@@ -259,10 +264,9 @@ function addTrips(days, newTrips) {
 }
 
 // models key times of trips
-function simulation(trips) {
+function simulateDays(/**@type {Trip[]}*/trips) {
     const blocks = Block.create(trips);
     splitAtBreaks(blocks, 4);
-    debugger;
     findDowntime(blocks, 'min');
 
     debugger;
@@ -306,12 +310,12 @@ function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
 }
 // 
 function findDowntime(/**@type {Block[]}*/blocks, minmax) { // 1 pass 'min' i guess
+    debugger;
     for (const block of blocks) {
-        debugger;
         const trips = block.trips;
         block.setDurations(minmax);
         block.setTimes(false);
-        // the entire try/catch and throwing functionality is already handled by the downtime setter
+
         let downtime = 0;
         for (let i = 0; i < trips.length - 1; i++) {
             downtime += secondsBetween(trips[i].model.times.end, trips[i+1].model.times.start);
@@ -323,22 +327,21 @@ function findDowntime(/**@type {Block[]}*/blocks, minmax) { // 1 pass 'min' i gu
 
         
     }
+    debugger;
 }
 
 
 
 
-exports.simulation = simulation;
+exports.simulateDays = simulateDays;
 //exports.addTrips = addTrips;
-exports.secondsBetween = secondsBetween;
 
 // exports for tests
 exports.Block = Block;
-//exports.Trip = Trip;
+
 
 
 
 // if start time is less than the offset chosen in settings after midnight, set block as previous day
-// i can probably automatically detect this setting
 
 // for very long breaks that couldnt possibly be downtime (2+ hours) dont count as downtime, but something else
