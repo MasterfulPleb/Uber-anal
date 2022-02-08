@@ -1,8 +1,7 @@
-const { app, BrowserWindow } = require('electron')
-const path = require('path')
+const { app, BrowserWindow } = require('electron');
 
-app.whenReady().then(createWindow)
-app.on('window-all-closed', app.quit)
+app.whenReady().then(createWindow);
+app.on('window-all-closed', app.quit);
 
 //Opens window on app start
 function createWindow () {
@@ -14,6 +13,6 @@ function createWindow () {
             nodeIntegration: true,
             contextIsolation: false
           }
-    })
-    win.loadFile('index.html')
+    });
+    win.loadFile('index.html').then(() => win.webContents.openDevTools()); // .then for debugging purposes
 }

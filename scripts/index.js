@@ -1,13 +1,16 @@
 'use strict';
 
-const { processFiles } = require('/UberAnal/scripts/process-files.js');
-const { simulation } = require('/UberAnal/scripts/simulation.new.js');
+const { Settings }       = require('/UberAnal/scripts/settings.js');
+const { processFiles }   = require('/UberAnal/scripts/process-files.js');
+const { simulation }     = require('/UberAnal/scripts/simulation.new.js');
 const { secondsBetween } = require('/UberAnal/scripts/utility.js');
-//const { Settings } = require('/UberAnal/scripts/settings.js');
-const $ = require('jquery')
-const Highcharts = require('highcharts/highstock');
+const $                  = require('jquery');
+const Highcharts         = require('highcharts/highstock');
 require('highcharts/indicators/indicators')(Highcharts);
 
+
+// initializes settings class, loading settings from localStorage
+Settings.init();
 
 // sets default values for charts
 Highcharts.setOptions({
@@ -96,9 +99,7 @@ var test = [];// for testing purposes
 // listeners for statement input
 const input = $('#input-box');
 const inputOverlay = $('#input-overlay')[0];
-inputOverlay.addEventListener('dragover', ev => {
-    ev.preventDefault();
-});
+inputOverlay.addEventListener('dragover', ev => ev.preventDefault());
 inputOverlay.addEventListener('dragenter', () => input.addClass('drag'));
 inputOverlay.addEventListener('dragleave', () => input.removeClass('drag'));
 inputOverlay.addEventListener('drop', ev => {
@@ -109,7 +110,7 @@ inputOverlay.addEventListener('drop', ev => {
         $('#input-view').addClass('hidden');
         $('#analysis-view').removeClass('hidden');
         analyze(data);
-    })
+    });
 });
 // listeners for chart selection
 $('#type').on('change', () => {
@@ -175,6 +176,7 @@ $('#settings-cancel').on('click', () => {
 // analyzes trips separating them into days and builds charts
 function analyze(data) {
     debugger;
+    if (Settings.requireFirstTimeSetup) {/** todo - do first time setup */}
     const days = simulation(data);
     //const charts = buildCharts(days);
     //renderChart();

@@ -2,119 +2,8 @@
 
 const { Settings } = require('/UberAnal/scripts/settings.js');
 const { secondsBetween, addTime } = require('/UberAnal/scripts/utility.js');
-const markets = require('/UberAnal/markets.json');
 
 
-// part of a trip's model representing seconds between key points
-class Durations {
-    /**@type {Number}*/pickup;
-    /**@type {Number}*/wait;
-    constructor(trip) {
-        // calculates time paid during trip in seconds (fare, long pickup, long wait)
-        const pay = trip.pay;
-        const cancellation = pay.cancel > 0;
-        const rates = markets[Settings.market][trip.type];
-        if (!cancellation) this.fare = Math.round(pay.time / rates.minute);
-        else {
-            // this is where long cancels are handled
-            // cancels inherit average pickup times but for longer cancels, extra time is accounted for in fare
-            // Comfort trips apparently have a higher base cancel rate if the driver initiates the cancel
-            // i try to account for that here but it's a poor attempt
-            let extra;
-            if (rates.cancel.driver > rates.cancel.rider && pay.cancel >= rates.cancel.driver) {
-                extra = (pay.cancel - rates.cancel.driver);
-            } else extra = (pay.cancel - rates.cancel.rider);
-            // extra assumes 1 mile driven for every 2 minutes waited and calculates duration accordingly
-            // to change the ratio change the integers below to the same value. ratio = 1 mile : x seconds
-            this.fare = Math.round( extra*120 / (rates.cancel.minute*120 + rates.cancel.mile) );
-        }
-        this.longPickup = pay.lPTime > 0 ?
-            Math.round(pay.lPTime / rates.longPickup.minute) : 0;
-        this.longWait = pay.waitTime > 0 ?
-            Math.round(pay.waitTime / rates.wait) : cancellation ?
-                this.longWait = 240 : 0;
-                // change this value to adjust canceled trip base time
-                // currently 240s + 2m + default pickup
-    }
-}
-// 
-class Times {
-    /**@type {Date}*/#start;
-    /**@type {Date}*/wait;
-    /**@type {Date}*/fare;
-    /**@type {Date}*/end;
-    #model;
-    constructor(model) {
-        this.#model = model;
-    }
-    get start() {
-        return this.#start;
-    }
-    set start(date) {
-        this.#start = date;
-        const durations = this.#model.durations;
-        this.wait = addTime(date, durations.pickup + durations.longPickup);
-        this.fare = addTime(this.wait, durations.wait + durations.longWait);
-        this.end = addTime(this.fare, durations.fare);
-    }
-}
-// time model for an individual trip
-class TModel {
-    constructor(trip) {
-        const pay = trip.pay;
-        this.cancellation = pay.cancel > 0;
-        this.longPickup = pay.lPTime > 0;
-        this.longWait = pay.waitTime > 0;
-        const d = this.durations = new Durations(trip);
-        this.paidTime = d.fare + d.longPickup + d.longWait;
-        this.blockStart = false;
-        this.blockEnd = false;
-        this.times = new Times(this);
-    }
-}
-// a trip
-class Trip {
-    /**@type {Date}*/dateTime;
-    /**@type {Number}*/pay;
-    /**@type {String}*/id;
-    /**@type {String}*/type;
-    /**@type {Boolean}*/dayStart;
-    /**@type {Boolean}*/dayEnd;
-    constructor(trip) {
-        this.dateTime = trip.dateTime;
-        this.pay = trip.pay;
-        this.id = trip.id;
-        this.type = trip.type;
-        this.model = new TModel(trip);
-        this.dayStart = trip.dayStart;
-        this.dayEnd = trip.dayEnd;
-    }
-    static trips = [];
-    // configures an array of trips 
-    static configure = function(trips) {
-        // if time difference between trips > 6 hours, mark as new day
-        // due to the way trips are processed, this time doesnt really matter
-        // todo - confirm that this time doesnt really matter
-        // yeah it really doesnt matter, i should be detecting the day automatically with the offset setting
-        const l = trips.length;
-        trips[0].dayStart = true;
-        trips[l-1].dayEnd = true;
-        for (let i=1; i<l; i++) {
-            const diff = secondsBetween(trips[i].dateTime, trips[i-1].dateTime);
-            if (diff > 21600) {// 6 hours
-                trips[i].dayStart = true;
-                trips[i-1].dayEnd = true;
-            } else {
-                trips[i].dayStart = false;
-                trips[i-1].dayEnd = false;
-            }
-        }
-        ////////// replace above with... something
-        for (const t in trips) trips[t] = new Trip(trips[t]);
-        Trip.trips = Trip.trips.concat(trips);
-        if (Settings.automaticallyDetectOffset) Settings.checkOffset(trips);
-    }
-}
 // the class Min & Max are based on
 class MinMax {
     /**@type {BModel}*/#model;
@@ -122,14 +11,24 @@ class MinMax {
     /**@type {Date}*/#end;
     /**@type {Number}*/#downtime
     /**@type {Number}*/unpaidTime;
-    /**@type {Number}*/baseUnaccountedTime;// all time that is not certain based on the statement
+    /**@type {Number}*/baseUnaccountedTime; // all time that is not certain based on the statement
+    /**@type {Number}*/unaccountedTime; // this represents only pickup and wait times that are not long
     /**@type {Number}*/unpaidPickup
     /**@type {Number}*/averagePickup
     /**@type {Number}*/unpaidWait
     /**@type {Number}*/averageWait
+    #pWeight = 0;
+    #wWeight = 0;
     constructor(trips, model) {
         this.#model = model;
         this.#trips = trips;
+        this.#wWeight = this.#model.normalWaits * 120;
+        this.#trips.forEach(trip => {
+            if (!trip.model.longPickup) {
+                this.#pWeight += Settings.marketData[trip.type].longPickup.threshold;
+            }
+        });
+        this.maxUnaccountedTime = this.#pWeight + this.#wWeight;
     }
     get end() {
         return this.#end;
@@ -140,7 +39,7 @@ class MinMax {
         let BUT = this.unpaidTime;
         this.#trips.forEach(trip => {
             if (trip.model.longPickup) {
-                BUT -= markets[Settings.market][trip.type].longPickup.threshold;
+                BUT -= Settings.marketData[trip.type].longPickup.threshold;
             }
             if (trip.model.longWait) BUT -= 120;
         });
@@ -149,24 +48,14 @@ class MinMax {
         if (BUT < 0) this.end = addTime(date, Math.abs(BUT));
         else this.#end = date;
     }
-    get unaccountedTime() {
-        // this represents only pickup and wait times that are not long
-        return this.unpaidPickup + this.unpaidWait; // todo - this still isnt right...
-    }
     get downtime() {
         return this.#downtime;
     }
     // recalculates pickups and waits when downtime is changed
     set downtime(num) {
-        this.#downtime = num;
-        const wWeight = this.#model.normalWaits * 120;
-        let pWeight = 0;
-        this.#trips.forEach(trip => {
-            if (!trip.model.longPickup) {
-                pWeight += markets[Settings.market][trip.type].longPickup.threshold;
-            }
-        });
-        if (pWeight == 0 && wWeight == 0) { // no normal pickups or waits
+        if (num > this.baseUnaccountedTime - this.maxUnaccountedTime) this.#downtime = num;
+        else this.#downtime = this.baseUnaccountedTime - this.maxUnaccountedTime
+        if (this.#pWeight == 0 && this.#wWeight == 0) { // no normal pickups or waits
             this.unpaidPickup = 0;
             this.averagePickup = 0;
             this.unpaidWait = 0;
@@ -174,27 +63,14 @@ class MinMax {
             console.error(`block found with no normal pickups/waits @ ${this.#trips[0].dateTime.toDateString()}`);// for debugging purposes
             // hmmmmmmmmmmmmmmmmmmmmmmmm
         } else {
-            const ut = this.baseUnaccountedTime - (this.downtime ?? 0);// todo - figure out what exactly downtime is here for
-            this.unpaidPickup = Math.round(ut * pWeight/ (pWeight + wWeight));
-            if (pWeight == 0) this.averagePickup = 0; // no normal pickups
+            this.unaccountedTime = this.baseUnaccountedTime - this.downtime;
+            this.unpaidPickup = Math.round(this.unaccountedTime * this.#pWeight / (this.maxUnaccountedTime));
+            if (this.#pWeight == 0) this.averagePickup = 0; // no normal pickups
             else this.averagePickup = Math.round(this.unpaidPickup / this.#model.normalPickups);
-            this.unpaidWait = Math.round(ut * wWeight / (wWeight + pWeight));
-            if (wWeight == 0) this.averageWait = 0; // no normal waits
+            this.unpaidWait = Math.round(this.unaccountedTime * this.#wWeight / (this.maxUnaccountedTime));
+            if (this.#wWeight == 0) this.averageWait = 0; // no normal waits
             else this.averageWait = Math.round(this.unpaidWait / this.#model.normalWaits);
         }
-    }
-    initialize() {
-        this.downtime = 0;
-        if (this.averagePickup > 600) {
-            let seconds = 0;
-            this.#trips.forEach(trip => {
-                if (!trip.model.longPickup) {
-                    seconds += markets[Settings.market][trip.type].longPickup.threshold;
-                }
-            });
-            this.downtime = this.unpaidPickup - seconds + this.unpaidWait - this.#model.normalWaits * 120
-        }
-        delete this.initialize;
     }
 }
 // 
@@ -203,12 +79,12 @@ class Min extends MinMax {
         super(trips, model);
         const lastTrip = trips[trips.length - 1];
         let seconds = lastTrip.model.paidTime;
-        if (lastTrip.model.longPickup) seconds += markets[Settings.market][lastTrip.type].longPickup.threshold;
+        if (lastTrip.model.longPickup) seconds += Settings.marketData[lastTrip.type].longPickup.threshold;
         if (lastTrip.model.longWait) seconds += 120
         this.end = addTime(lastTrip.dateTime, seconds);
         // if end time is earlier than is possible, shift it to be just possible
         if (this.baseUnaccountedTime < 0) this.end = addTime(this.end, Math.abs(this.baseUnaccountedTime));
-        this.initialize();
+        this.downtime = 0;
     }
 }
 // 
@@ -216,10 +92,10 @@ class Max extends MinMax {
     constructor(/**@type {Trip[]}*/trips, model) {
         super(trips, model);
         const lastTrip = trips[trips.length - 1];
-        let seconds = lastTrip.model.paidTime + 120 + markets[Settings.market][lastTrip.type].longPickup.threshold;
+        let seconds = lastTrip.model.paidTime + 120 + Settings.marketData[lastTrip.type].longPickup.threshold;
         if (trips.length > 1) seconds += trips[trips.length - 2].model.durations.fare;
         this.end = addTime(lastTrip.dateTime, seconds);
-        this.initialize();
+        this.downtime = 0;
     }
 }
 // time model for a block of trips
@@ -236,6 +112,10 @@ class BModel {
         this.min = new Min(trips, this);
         this.max = new Max(trips, this);
     }
+    setDowntime(value) {
+        if (this.min != undefined && value > this.min.downtime) this.min.downtime = value;
+        if (this.max != undefined && value > this.min.downtime) this.max.downtime = value;
+    }
 }
 // block of trips, generally representing a day
 class Block {
@@ -245,7 +125,7 @@ class Block {
         else this.date = start.toDateString();
         /**@type {Trip[]}*/this.trips = trips;
         this.model = new BModel(trips);
-        this.setDurations('max', false); // todo - review this setting and whether i would want it to be different when creating new blocks
+        this.setDurations('max'); // todo - review this setting and whether i would want it to be different when creating new blocks
         this.setTimes(false, true);
     }
     // splits trips into array of objects representing blocks, returns blocks
@@ -254,31 +134,27 @@ class Block {
         const arr = [];
         for (const trip of trips) {
             arr.push(trip);
-            if (trip.dayEnd) {
-                arr[0].model.blockStart = true;
-                trip.model.blockEnd = true;
-                blocks.push(new Block(arr.splice(0)));
-            }
+            if (trip.model.blockEnd) blocks.push(new Block(arr.splice(0)));
         }
         return blocks;
     }
     // sets pickup & wait durations for each trip
-    setDurations(minmax, visualWarnings=true, throwOnWarnings=false) {
-        /**@type {Min}*/const mm = this.model[minmax];
+    setDurations(minmax/*, visualWarnings=true, throwOnWarnings=false*/) {
         for (const trip of this.trips) {
             const model = trip.model;
             if (model.longPickup) model.durations.pickup = 600;
-            else model.durations.pickup = mm.averagePickup;
+            else model.durations.pickup = this.model[minmax].averagePickup;
             if (model.longWait) model.durations.wait = 120;
-            else model.durations.wait = mm.averageWait;
+            else model.durations.wait = this.model[minmax].averageWait;
         }
-        if (mm.averageWait == 120) {
+        /*if (mm.averageWait == 120) {
             if (visualWarnings) console.warn(`${minmax} average times greater than allowable @ ${this.date}`);
-            if (throwOnWarnings) throw 'meep';// its gotta throw something...
-        }
+            //if (throwOnWarnings) throw 'meep';// its gotta throw something...
+        }*/
     }
     // sets simulated times for each trip
     setTimes(visualWarnings=true, strict=false, correctTrips=false, minmax='') {
+        //debugger;
         const trips = this.trips;
         let collision = false;
         let badTrips = []; // logs unfixable trips to prevent shiftTimes() from infinitely looping
@@ -325,10 +201,13 @@ class Block {
                     times.start = lastTripTimes.end;
                     continue;
                 }
-                if (i != revisit) {
+                console.log(`shifting times @ ${trip.dateTime}`); // for debugging purposes
+                times.start = lastTripTimes.end; // for debugging purposes
+                continue; // for debugging purposes
+                /*if (i != revisit) {
                     try {
                         // todo - build shiftTimes. probably into the Block class
-                        i -= shiftTimes(/*block, */i, minmax);
+                        i -= shiftTimes(i, minmax);
                     } catch (stepsBack) {
                         revisit = i;
                         i -= stepsBack + 1;
@@ -337,7 +216,7 @@ class Block {
                     }
                 }
                 try {
-                    i -= shiftTimes(/*block, */i, minmax, true);
+                    i -= shiftTimes(i, minmax, true);
                 } catch {
                     badTrips.push(i);
                     i -= stepsBack + 1;
@@ -345,7 +224,7 @@ class Block {
                 } finally {
                     revisit = -1;
                     continue;
-                }
+                }*/
             }
             // normal trip accepted during last trip
             if (lastTripTimes.end >= trip.dateTime) {
@@ -356,6 +235,19 @@ class Block {
             times.start = trip.dateTime;
         }
         if (collision && visualWarnings) console.warn(`trip accepted before last fare time started on ${this.date}`);
+    }
+    // 
+    shiftTimes(i, minmax, revisit = false) {
+        let stepsBack = 1;
+        const trips = this.trips;
+        const trip = trips[i];
+        console.log(`shifting times @ ${trip.dateTime}`); // for debugging purposes
+        if (revisit) console.warn(`revisiting times @ ${trip.dateTime}`); // for debugging purposes
+        let diff = secondsBetween(trips[i-1].model.times.fare, trip.dateTime);
+
+
+        // if two trips start at the same time according to the statement, make sure the longer trip is
+        // indexed after the shorter trip - Jun 26 @ 00:00
     }
 }
 
@@ -368,37 +260,14 @@ function addTrips(days, newTrips) {
 
 // models key times of trips
 function simulation(trips) {
-    configureMarket();
-    Trip.configure(trips);
     const blocks = Block.create(trips);
     splitAtBreaks(blocks, 4);
     debugger;
-    findDowntime(blocks);
+    findDowntime(blocks, 'min');
 
     debugger;
 
     return blocks; // for testing
-}
-// converts dollars/minute values into pennies/second, others into pennies
-function configureMarket() {
-    for (const t in markets[Settings.market]) {
-        const type = markets[Settings.market][t];
-        for (const key in type) {
-            if (key == 'minute' || key == 'wait') {
-                type[key] *= 10/6;
-            } else if (key == 'base' || key == 'mile' || key == 'minimum') {
-                type[key] *= 100;
-            } else {
-                for (const key2 in type[key]) {
-                    if (key2 == 'minute') {
-                        type[key][key2] *= 10/6;
-                    } else if (key2 != 'threshold') {
-                        type[key][key2] *= 100;
-                    } else type[key][key2] *= 60;
-                }
-            }
-        }
-    }
 }
 // finds breaks in blocks and splits them
 function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
@@ -436,12 +305,22 @@ function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
     }
 }
 // 
-function findDowntime(/**@type {Block[]}*/blocks) { // 1 pass 'min' i guess
+function findDowntime(/**@type {Block[]}*/blocks, minmax) { // 1 pass 'min' i guess
     for (const block of blocks) {
         debugger;
         const trips = block.trips;
-        block.setDurations('', false);
+        block.setDurations(minmax);
         block.setTimes(false);
+        // the entire try/catch and throwing functionality is already handled by the downtime setter
+        let downtime = 0;
+        for (let i = 0; i < trips.length - 1; i++) {
+            downtime += secondsBetween(trips[i].model.times.end, trips[i+1].model.times.start);
+        }
+        block.model.setDowntime(downtime);
+        block.setDurations(minmax);
+        
+        block.setTimes(false, false, true, minmax);
+
         
     }
 }
@@ -455,7 +334,7 @@ exports.secondsBetween = secondsBetween;
 
 // exports for tests
 exports.Block = Block;
-exports.Trip = Trip;
+//exports.Trip = Trip;
 
 
 

@@ -13,6 +13,7 @@
     "jest": "^27.5.0"
   },
   "dependencies": {
+    "electron-cookies": "github:heap/electron-cookies",
     "highcharts": "^9.3.3",
     "jquery": "^3.6.0"
   }
