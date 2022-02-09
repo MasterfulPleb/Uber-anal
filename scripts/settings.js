@@ -7,15 +7,24 @@ const markets = require('/UberAnal/markets.json');
 // const { PreTrip } = require('/UberAnal/scripts/process-files.js'); // needs to be commented to avoid circular dependency
 
 
-/**@description The class used to store settings*/
+/** The class used to store settings */
 class Settings {
     constructor() {}
     static market = ''; // Upstate NY
+    /**
+     * @typedef {{ mile: Number, minute: Number, threshold: Number }} LongPickupMarketData
+     * @typedef {{ driver: Number, rider: Number, mile: Number, minute: Number }} CancelMarketData
+     * @typedef {{ base: Number, mile: Number, minute: Number,  wait: Number, minimum: Number,
+     *      longPickup: LongPickupMarketData, cancel: CancelMarketData }} TripTypeMarketData
+     * @typedef {{ UberX: TripTypeMarketData, UberXL: TripTypeMarketData, 'Uber Pet': TripTypeMarketData,
+     *      Comfort: TripTypeMarketData, Connect: TripTypeMarketData }} MarketData
+     * @type {MarketData} */
     static marketData;
     static darkmode = true;
-    static offset = 0; // where to break days in the charts - latest time worked after midnight
+    /** Where to break days in the charts - latest time worked after midnight */
+    static offset = 0;
     static automaticallyDetectOffset = true;
-    /**@description returns array of property names in Settings*/
+    /** Returns array of property names for user changable settings in Settings */
     static keys() {
         const arr = [];
         for (const key in Settings) {
@@ -25,7 +34,7 @@ class Settings {
         }
         return arr;
     }
-    /**@description loads settings from localStorage, setting defaults if there are none set*/
+    /** Loads settings from localStorage, setting defaults if there are none set */
     static init() {
         for (const key of Settings.keys()) {
             const storedValue = localStorage.getItem(key)
@@ -35,7 +44,7 @@ class Settings {
         if (Settings.market == '') Settings.runFirstTimeSetup();
         Settings.configureMarket();
     }
-    /**@description commits settings to localStorage and applies changes*/
+    /** Commits settings to localStorage and applies changes */
     static apply() {
         const changes = [];
         for (const key in Settings.keys()) {
@@ -58,8 +67,9 @@ class Settings {
             // todo - rerun simulation
         }
     }
-    /**@description attempts to find an appropriate offset*/
-    static detectOffset(/**@type {PreTrip[]}*/trips) {
+    /** Attempts to find an appropriate offset
+     * @param {PreTrip[]} trips */
+    static detectOffset(trips) {
         let offset = 0;
         /**@type {Date[]}*/let block = [];
         for (const trip of trips) {
@@ -80,14 +90,14 @@ class Settings {
             localStorage.setItem('offset', offset.toString());
         }
     }
-    /**@description handles first-time setup*/
+    /** Handles first-time setup */
     static runFirstTimeSetup() {
         // todo - create a first-time setup
         console.info('first time setup ran'); // for testing purposes
         Settings.market = 'Upstate NY'; // for testing purposes
         // if market is not already in data, require entering market data
     }
-    /**@description converts dollar/minute values into pennies/second, others into pennies*/
+    /** Converts dollars/minute to pennies/second, dollars to pennies, and minutes to seconds */
     static configureMarket() {
         for (const key in markets[Settings.market]) {
             const type = markets[Settings.market][key];
@@ -115,5 +125,9 @@ class Settings {
 exports.Settings = Settings;
 
 
-
 // ask about sharing data in first time setup
+// drivers who start before 01/01/2015 earn ~5% more
+// there's a list of fares on the r/UberDriver subreddit
+
+
+// when mouse is between apply and cancel buttons, it shows as a typing cursor hoverey thing

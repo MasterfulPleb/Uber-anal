@@ -4,7 +4,7 @@ const { addTime, secondsBetween } = require('/UberAnal/scripts/utility.js');
 const { Settings } = require('/UberAnal/scripts/settings.js');
 
 
-/**@description breakdown of pay recieved in a trip*/
+/** Breakdown of pay recieved in a trip */
 class Pay {
     constructor(pay) {
         /**@type {Number}*/this.base = pay.base;
@@ -23,7 +23,7 @@ class Pay {
         for (let key in this) if (isNaN(this[key])) this[key] = 0;
     }
 }
-/**@description class for storing data about a trip before actually building the trip*/
+/** Class for storing data about a trip before actually building the trip */
 class PreTrip {
     dayStart = false;
     dayEnd = false;
@@ -33,8 +33,9 @@ class PreTrip {
         /**@type {string}*/this.type = trip.type;
         /**@type {Pay}*/this.pay = new Pay(trip.pay);
     }
-    /**@description converts CSV string into trips*/
-    static createFromCSV(/**@type {String}*/CSVtext) {
+    /** Converts CSV string into trips
+     * @param {String} CSVtext A CSV that has been converted to a string */
+    static createFromCSV(CSVtext) {
         // parses CSV
         var arr = CSVtext.split('\n');
         var headers = arr.slice(0, 1).toString().split(',');
@@ -125,7 +126,7 @@ class PreTrip {
             removed: PreTrip.create(removed)
         };
     }
-    /**@description converts an array of trip data to PreTrips*/
+    /** Converts an array of trip data to PreTrips */
     static create(trips) {
         const arr = [];
         for (const trip of trips) {
@@ -134,7 +135,7 @@ class PreTrip {
         return arr;
     }
 }
-/**@description part of a trip's model representing seconds between key times*/
+/** Part of a trip's model representing seconds between key times */
 class Durations {
     /**@type {Number}*/pickup;
     /**@type {Number}*/wait;
@@ -145,34 +146,36 @@ class Durations {
         const rates = Settings.marketData[trip.type];
         if (!cancellation) this.fare = Math.round(pay.time / rates.minute);
         else {
-            // this is where long cancels are handled
-            // cancels inherit average pickup times but for longer cancels, extra time is accounted for in fare
-            // Comfort trips apparently have a higher base cancel rate if the driver initiates the cancel
-            // i try to account for that here but it's a poor attempt
+            /* This is where long cancels are handled
+             * cancels inherit average pickup times but for longer cancels,
+             * extra time is accounted for in fare. Comfort trips apparently
+             * have a higher base cancel rate if the driver initiates the cancel.
+             * i try to account for that here but it's a poor attempt */
             let extra;
             if (rates.cancel.driver > rates.cancel.rider && pay.cancel >= rates.cancel.driver) {
                 extra = (pay.cancel - rates.cancel.driver);
             } else extra = (pay.cancel - rates.cancel.rider);
-            // extra assumes 1 mile driven for every 2 minutes waited and calculates duration accordingly
-            // to change the ratio change the integers below to the same value. ratio = 1 mile : x seconds
+            /* Extra assumes 1 mile driven for every 2 minutes waited and
+             * calculates duration accordingly. To change the ratio, change
+             * the integers below to the same value. ratio = 1 mile : x seconds */
             this.fare = Math.round( extra*120 / (rates.cancel.minute*120 + rates.cancel.mile) );
         }
         this.longPickup = pay.lPTime > 0 ?
             Math.round(pay.lPTime / rates.longPickup.minute) : 0;
         this.longWait = pay.waitTime > 0 ?
             Math.round(pay.waitTime / rates.wait) : cancellation ?
+            /* change this value to adjust canceled trip base time
+             * currently 240s + 2m + default pickup */
                 this.longWait = 240 : 0;
-                // change this value to adjust canceled trip base time
-                // currently 240s + 2m + default pickup
     }
 }
-/**@description key times of a trip*/
+/** Key times of a trip */
 class Times {
     /**@type {Date}*/#start;
     /**@type {Date}*/wait;
     /**@type {Date}*/fare;
     /**@type {Date}*/end;
-    #model;
+    /**@type {TModel}*/#model;
     constructor(model) { this.#model = model; }
     get start() { return this.#start; }
     set start(date) {
@@ -183,7 +186,7 @@ class Times {
         this.end = addTime(this.fare, durations.fare);
     }
 }
-/**@description model for an individual trip*/
+/** Model for an individual trip */
 class TModel {
     constructor(trip) {
         const pay = trip.pay;
@@ -192,28 +195,28 @@ class TModel {
         this.longWait = pay.waitTime > 0;
         const d = this.durations = new Durations(trip);
         this.paidTime = d.fare + d.longPickup + d.longWait;
-        this.blockStart = trip.dayStart;
-        this.blockEnd = trip.dayEnd;
+        /**@type {Boolean}*/this.blockStart = trip.dayStart;
+        /**@type {Boolean}*/this.blockEnd = trip.dayEnd;
         this.times = new Times(this);
     }
 }
-/**@description an individual trip*/
+/** An individual trip */
 class Trip extends PreTrip {
-    constructor(/**@type {PreTrip}*/trip) {
+    /** @param {PreTrip} trip */
+    constructor(trip) {
         super(trip);
         this.model = new TModel(trip);
         this.dayStart = trip.dayStart;
         this.dayEnd = trip.dayEnd;
     }
-    /**
-     * @type {{ trips: Trip[], tips: PreTrip[], removed: PreTrip[] }}
-     * @description reference to all trips that exist
-    */
+    /** Reference to all trips that exist
+     * @type {{ trips: Trip[], tips: PreTrip[], removed: PreTrip[] }} */
     static all = { trips: [], tips: [], removed: [] };
-    /**@description converts an array of PreTrips to Trips*/
-    static configure(/**@type {PreTrip[]}*/trips) {
+    /** Converts an array of PreTrips to Trips
+     * @param {PreTrip[]} trips */
+    static configure(trips) {
         trips.sort((a, b) => a.dateTime - b.dateTime)
-        /**@type {{ date: Date, trips: PreTrip[] }}*/
+        /** @type {{ date: Date, trips: PreTrip[] }} */
         let block = { trips: [] };
         for (const trip of trips) {
             let offsetDate = new Date(trip.dateTime)
@@ -235,13 +238,15 @@ class Trip extends PreTrip {
             trip.dayStart = true;
             block = { date: offsetDate, trips: [trip] };
         }
+        trips[trips.length - 1].dayEnd = true;
         for (const t in trips) trips[t] = new Trip(trips[t]);
     }
 }
 
 
-/**@description processes a FileList into object containing trips*/
-async function processFiles(/**@type {FileList}*/files) {
+/** Processes a FileList into object containing trips
+ * @param {FileList} files */
+async function processFiles(files) {
     const filenames = [];
     const imports = [];
     for (const file of files) {

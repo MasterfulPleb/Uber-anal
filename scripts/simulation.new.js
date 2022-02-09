@@ -1,22 +1,26 @@
 'use strict';
 
-const { Settings } = require('/UberAnal/scripts/settings.js');
 const { secondsBetween, addTime } = require('/UberAnal/scripts/utility.js');
+const { Settings } = require('/UberAnal/scripts/settings.js');
 
 
-// for testing purposes - this makes intellisense work
-const { Trip } = require('/UberAnal/scripts/process-files.js');
+// for testing purposes
+const { Trip } = require('/UberAnal/scripts/process-files.js'); // for intellisense
+const { debuggingTimeVisualization } = require('/UberAnal/scripts/charts.js');
 
 
-// the class Min & Max are based on
+/** The base class Min & Max are built from */
 class MinMax {
     /**@type {BModel}*/#model;
     /**@type {Trip[]}*/#trips;
     /**@type {Date}*/#end;
     /**@type {Number}*/#downtime
     /**@type {Number}*/unpaidTime;
-    /**@type {Number}*/baseUnaccountedTime; // all time that is not certain based on the statement
-    /**@type {Number}*/unaccountedTime; // this represents only pickup and wait times that are not long
+    /** All time that is not certain based on the statement -
+     *  normal pickups, normal waits & downtime
+     * @type {Number}*/baseUnaccountedTime;
+    /** Pickup and wait times that are not long
+     * @type {Number}*/unaccountedTime;
     /**@type {Number}*/unpaidPickup
     /**@type {Number}*/averagePickup
     /**@type {Number}*/unpaidWait
@@ -37,7 +41,7 @@ class MinMax {
     get end() {
         return this.#end;
     }
-    // recalculates unpaidTime and baseUnaccountedTime when end time is changed
+    /** Recalculates unpaidTime and baseUnaccountedTime when changed */
     set end(date) {
         this.unpaidTime = secondsBetween(this.#model.startTime, date) - this.#model.paidTime;
         let BUT = this.unpaidTime;
@@ -55,7 +59,7 @@ class MinMax {
     get downtime() {
         return this.#downtime;
     }
-    // recalculates pickups and waits when downtime is changed
+    /** Recalculates unpaid/average pickup & unpaid/average wait when changed */
     set downtime(num) {
         if (num > this.baseUnaccountedTime - this.maxUnaccountedTime) this.#downtime = num;
         else this.#downtime = this.baseUnaccountedTime - this.maxUnaccountedTime
@@ -65,7 +69,7 @@ class MinMax {
             this.unpaidWait = 0;
             this.averageWait = 0;
             console.error(`block found with no normal pickups/waits @ ${this.#trips[0].dateTime.toDateString()}`);// for debugging purposes
-            // hmmmmmmmmmmmmmmmmmmmmmmmm
+            // todo - just check out one of these blocks, artificially create one if i have to
         } else {
             this.unaccountedTime = this.baseUnaccountedTime - this.downtime;
             this.unpaidPickup = Math.round(this.unaccountedTime * this.#pWeight / (this.maxUnaccountedTime));
@@ -77,9 +81,10 @@ class MinMax {
         }
     }
 }
-// 
+/**  */
 class Min extends MinMax {
-    constructor(/**@type {Trip[]}*/trips, model) {
+    /** @param {Trip[]} trips */
+    constructor(trips, model) {
         super(trips, model);
         const lastTrip = trips[trips.length - 1];
         let seconds = lastTrip.model.paidTime;
@@ -91,9 +96,10 @@ class Min extends MinMax {
         this.downtime = 0;
     }
 }
-// 
+/**  */
 class Max extends MinMax {
-    constructor(/**@type {Trip[]}*/trips, model) {
+    /** @param {Trip[]} trips */
+    constructor(trips, model) {
         super(trips, model);
         const lastTrip = trips[trips.length - 1];
         let seconds = lastTrip.model.paidTime + 120 + Settings.marketData[lastTrip.type].longPickup.threshold;
@@ -102,10 +108,11 @@ class Max extends MinMax {
         this.downtime = 0;
     }
 }
-// time model for a block of trips
+/** Model for a block of trips */
 class BModel {
-    /**@type {Date}*/startTime
-    constructor(/**@type {Trip[]}*/trips) {
+    /**@type {Date}*/startTime;
+    /** @param {Trip[]} trips */
+    constructor(trips) {
         this.startTime = trips[0].dateTime;
         this.paidTime = 0;
         for (const trip of trips) this.paidTime += trip.model.paidTime;
@@ -116,24 +123,28 @@ class BModel {
         this.min = new Min(trips, this);
         this.max = new Max(trips, this);
     }
+    /** Sets downtime for both Min and Max */
     setDowntime(value) {
         if (this.min != undefined && value > this.min.downtime) this.min.downtime = value;
         if (this.max != undefined && value > this.min.downtime) this.max.downtime = value;
     }
 }
-// block of trips, generally representing a day
+/** Block of trips */
 class Block {
-    constructor(/**@type {Trip[]}*/trips) {
+    /** @param {Trip[]} trips */
+    constructor(trips) {
         let start = trips[0].dateTime;
-        if (start.getHours() < Settings.offset) this.date = addTime(start, -86400).toDateString();
-        else this.date = start.toDateString();
-        /**@type {Trip[]}*/this.trips = trips;
+        if (start.getHours() < Settings.offset) {
+            this.date = addTime(start, -86400).toDateString();
+        } else this.date = start.toDateString();
+        this.trips = trips;
         this.model = new BModel(trips);
         this.setDurations('max'); // todo - review this setting and whether i would want it to be different when creating new blocks
         this.setTimes(false, true);
     }
-    // splits trips into array of objects representing blocks, returns blocks
-    static create = function(/**@type {Trip[]}*/trips) {
+    /** Returns array of blocks built from trips
+     * @param {Trip[]} trips */
+    static create = function(trips) {
         const blocks = [];
         const arr = [];
         for (const trip of trips) {
@@ -142,7 +153,7 @@ class Block {
         }
         return blocks;
     }
-    // sets pickup & wait durations for each trip
+    /** Sets pickup & wait durations for each trip */
     setDurations(minmax/*, visualWarnings=true, throwOnWarnings=false*/) {
         for (const trip of this.trips) {
             const model = trip.model;
@@ -156,7 +167,7 @@ class Block {
             //if (throwOnWarnings) throw 'meep';// its gotta throw something...
         }*/
     }
-    // sets simulated times for each trip
+    /** Sets simulated times for each trip */
     setTimes(visualWarnings=true, strict=false, correctTrips=false, minmax='') {
         //debugger;
         const trips = this.trips;
@@ -240,7 +251,7 @@ class Block {
         }
         if (collision && visualWarnings) console.warn(`trip accepted before last fare time started on ${this.date}`);
     }
-    // 
+    /**  */
     shiftTimes(i, minmax, revisit = false) {
         //debugger;
         let stepsBack = 1;
@@ -253,28 +264,34 @@ class Block {
 
         // if two trips start at the same time according to the statement, make sure the longer trip is
         // indexed after the shorter trip - Jun 26 @ 00:00
+
+        // build a chart to help with building this method
     }
 }
 
 
 
-// adds new trips after simulation has already ran
+/** Adds new trips after simulation has already ran */
 function addTrips(days, newTrips) {
     // add new trips passed to this function from an event handler to the days array held by index.js
 }
 
-// models key times of trips
-function simulateDays(/**@type {Trip[]}*/trips) {
+/** Models key times of trips
+ * @param {Trip[]} trips */
+function simulateDays(trips) {
     const blocks = Block.create(trips);
     splitAtBreaks(blocks, 4);
+    debuggingTimeVisualization(trips); // for testing purposes
     findDowntime(blocks, 'min');
 
+    //debuggingTimeVisualization(trips); // for testing purposes
     debugger;
 
     return blocks; // for testing
 }
-// finds breaks in blocks and splits them
-function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
+/** Finds breaks in blocks and splits them
+ * @param {Block[]} blocks */
+function splitAtBreaks(blocks, passes = 1) {
     for (let p = 1; p <= passes; p++) {
         console.groupCollapsed(`pass ${p}`); // for debugging purposes
         // sets limit to 2 hours first pass, 1 hour second pass, 40 mins third, 30 fourth...
@@ -308,13 +325,15 @@ function splitAtBreaks(/**@type {Block[]}*/blocks, passes=1) {
         }
     }
 }
-// 
-function findDowntime(/**@type {Block[]}*/blocks, minmax) { // 1 pass 'min' i guess
-    debugger;
+/** 
+ * @param {Block[]} blocks */
+function findDowntime(blocks, minmax) { // 1 pass 'min' i guess
+    //debugger;
     for (const block of blocks) {
         const trips = block.trips;
         block.setDurations(minmax);
         block.setTimes(false);
+        debuggingTimeVisualization(trips); // for testing purposes
 
         let downtime = 0;
         for (let i = 0; i < trips.length - 1; i++) {
@@ -324,10 +343,11 @@ function findDowntime(/**@type {Block[]}*/blocks, minmax) { // 1 pass 'min' i gu
         block.setDurations(minmax);
         
         block.setTimes(false, false, true, minmax);
+        //debuggingTimeVisualization(trips); // for testing purposes
 
         
     }
-    debugger;
+    //debugger;
 }
 
 
