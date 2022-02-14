@@ -8,7 +8,7 @@ const { renderChart }    = require('/UberAnal/scripts/charts.js');
 const $                  = require('jquery');
 
 // imports for intellisense
-const { Trip, PreTrip }   = require('/UberAnal/scripts/process-files.js');
+const { Trip, PreTrip }  = require('/UberAnal/scripts/process-files.js');
 
 
 // initializes settings class, loading settings from localStorage

@@ -14,5 +14,5 @@ function createWindow () {
             contextIsolation: false
           }
     });
-    win.loadFile('index.html').then(() => win.webContents.openDevTools()); // .then for debugging purposes
+    win.loadFile('index.html')//.then(() => win.webContents.openDevTools()); // .then for debugging purposes
 }

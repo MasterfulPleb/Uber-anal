@@ -281,7 +281,7 @@ function addTrips(days, newTrips) {
 function simulateDays(trips) {
     const blocks = Block.create(trips);
     splitAtBreaks(blocks, 4);
-    debuggingTimeVisualization(trips); // for testing purposes
+    //debuggingTimeVisualization(trips); // for testing purposes
     findDowntime(blocks, 'min');
 
     //debuggingTimeVisualization(trips); // for testing purposes
@@ -333,21 +333,43 @@ function findDowntime(blocks, minmax) { // 1 pass 'min' i guess
         const trips = block.trips;
         block.setDurations(minmax);
         block.setTimes(false);
-        debuggingTimeVisualization(trips); // for testing purposes
-
         let downtime = 0;
         for (let i = 0; i < trips.length - 1; i++) {
             downtime += secondsBetween(trips[i].model.times.end, trips[i+1].model.times.start);
         }
         block.model.setDowntime(downtime);
         block.setDurations(minmax);
-        
         block.setTimes(false, false, true, minmax);
-        //debuggingTimeVisualization(trips); // for testing purposes
 
-        
     }
-    //debugger;
+    const trips = Trip.all.trips;
+    debuggingTimeVisualization(trips); // for testing purposes
+
+    // try to detect trips with shifted times
+    
+
+
+
+
+
+
+
+
+    debuggingTimeVisualization(trips); // for testing purposes
+    /*for (let i = 0; i < trips.length - 1; i++) {
+        const durations = trips[i].model.durations;
+        const d2 = trips[i+1].model.durations;
+        const a = secondsBetween(trips[i].dateTime, trips[i+1].dateTime);
+        const b = durations.fare + (durations.longPickup > 0 ? durations.longPickup + 600 : 0) + (durations.longWait > 0 ? durations.longWait + 120 : 0);
+        const c = trips[i].dateTime.toString().slice(0, 24);
+        const d = trips[i+1].dateTime.toString().slice(16, 24);
+        const e = d2.fare + (d2.longPickup > 0 ? d2.longPickup + 600 : 0) + (d2.longWait > 0 ? d2.longWait + 120 : 0);
+        //if (a < b) console.log(`statement time discrepancy ${b} > ${a} @ ${c} - ${d}`);
+        if (a < b && b > 300 && a < 121) {
+            const f = `statement time discrepancy ${b} > ${a} || ${e}`.padEnd(47, ' ');
+            console.log(`${f} @ ${c} - ${d}`);
+        }
+    }*/
 }
 
 
@@ -365,3 +387,24 @@ exports.Block = Block;
 // if start time is less than the offset chosen in settings after midnight, set block as previous day
 
 // for very long breaks that couldnt possibly be downtime (2+ hours) dont count as downtime, but something else
+
+// give waits less weight than it's currently at against pickups
+
+
+// if two trip times are suspiciously close, check if the later should be put first
+
+
+// cancels need to be marked as long waits
+// if rider canceled, there was no wait...... but theres no way to tell
+
+
+
+// check trips from 2/11 because apparently pickup and wait is being set to 0 and 2 what the fuck?
+
+
+
+
+// main offenders of misaligned statement times just need to be pushed back to fill the downtime gap created,
+// where trips blatantly collide, do what is best to fill as much downtime as possible - 
+//  if sliding first trip back will mesh smoothly do it, if its like throwing a hotdog down a hallway 
+//  then check if swapping the trips would create a better fit

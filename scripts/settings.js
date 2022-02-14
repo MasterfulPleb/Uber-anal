@@ -1,7 +1,7 @@
 'use strict';
 
 const { secondsBetween } = require('/UberAnal/scripts/utility.js');
-const markets = require('/UberAnal/markets.json');
+const markets = require('/UberAnal/data/markets.json');
 
 // for testing purposes - this makes intellisense work
 // const { PreTrip } = require('/UberAnal/scripts/process-files.js'); // needs to be commented to avoid circular dependency
@@ -10,6 +10,8 @@ const markets = require('/UberAnal/markets.json');
 /** The class used to store settings */
 class Settings {
     constructor() {}
+    static chart; // the debug chart for testing purposes
+    static chartObj; // the object used to build debug chart for testing purposes
     static market = ''; // Upstate NY
     /**
      * @typedef {{ mile: Number, minute: Number, threshold: Number }} LongPickupMarketData
